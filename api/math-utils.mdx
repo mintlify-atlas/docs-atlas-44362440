@@ -1,0 +1,78 @@
+---
+title: "MathUtils Class — Linear Mapping and Constants API"
+sidebarTitle: "MathUtils"
+description: "MathUtils provides a static Map() function for linear range scaling and a constexpr pi constant. Useful for animations, wave functions, and coordinate transforms."
+---
+
+`MathUtils` is a small static utility class with a linear range mapping function and the mathematical constant `pi`. All members are static — no instance is needed. It is commonly used to convert between coordinate spaces, drive wave-based animations, and scale game values such as health or progress bars.
+
+## Header
+
+```cpp
+#include "include/headers/MathUtils.h"  // included automatically via Fazen.h
+```
+
+## Members
+
+| Member | Type | Value / Signature | Description |
+|--------|------|-------------------|-------------|
+| `pi` | `static constexpr double` | `3.141592653589793238` | Mathematical constant π |
+| `Map` | `static float` | `Map(float value, float x1, float x2, float y1, float y2)` | Linearly maps `value` from `[x1, x2]` to `[y1, y2]` |
+
+### `static constexpr double pi`
+
+A compile-time constant equal to `3.141592653589793238`. Use it with `std::sin`, `std::cos`, or any formula that requires radians.
+
+### `static float Map(float value, float x1, float x2, float y1, float y2)`
+
+Linearly scales `value` from the input range `[x1, x2]` to the output range `[y1, y2]`. Values outside the input range are extrapolated linearly.
+
+## `Map()` Formula
+
+The mapping is a standard linear interpolation:
+
+```
+result = y1 + (value - x1) * (y2 - y1) / (x2 - x1)
+```
+
+This is equivalent to finding the slope `m = (y2 - y1) / (x2 - x1)`, the intercept `b = y1 - m * x1`, and evaluating `m * value + b`.
+
+## Parameters
+
+<ParamField path="value" type="float" required>
+  The input value to map. Can be any point within or outside `[x1, x2]`.
+</ParamField>
+
+<ParamField path="x1" type="float" required>
+  The lower bound of the input range.
+</ParamField>
+
+<ParamField path="x2" type="float" required>
+  The upper bound of the input range. Must not equal `x1` (would produce a division by zero).
+</ParamField>
+
+<ParamField path="y1" type="float" required>
+  The lower bound of the output range. Returned when `value` equals `x1`.
+</ParamField>
+
+<ParamField path="y2" type="float" required>
+  The upper bound of the output range. Returned when `value` equals `x2`.
+</ParamField>
+
+## Usage Examples
+
+```cpp
+// Convert mouse X (0..99 cells) to angle (0..2π)
+float angle = MathUtils::Map(game.mouseHandler.GetMouseX(), 0, 99, 0, 2 * MathUtils::pi);
+
+// Map a health value (0..100) to a bar width (0..50 cells)
+float barWidth = MathUtils::Map(health, 0, 100, 0, 50);
+Box healthBar(2, 38, barWidth, 2, greenF);
+
+// Animate a sine wave position
+float t = frameCount * 0.05f;
+float y = MathUtils::Map(std::sin(t), -1.0f, 1.0f, 5.0f, 35.0f);
+Point wave(50.0f, y, yellowF);
+```
+
+In the sine wave example, `std::sin(t)` produces values in `[-1, 1]` which `Map` stretches to the vertical console range `[5, 35]`, producing smooth oscillation between rows 5 and 35.

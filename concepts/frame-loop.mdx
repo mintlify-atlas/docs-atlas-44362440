@@ -1,0 +1,140 @@
+---
+title: "The Fazen2d Frame Loop: Clear, Draw, Display"
+sidebarTitle: "Frame Loop"
+description: "Learn how Fazen2d's clear-draw-display cycle works, how the CHAR_INFO back-buffer is managed, and how to use delta time for frame-rate independent animation."
+---
+
+Fazen2d renders via a double-buffered frame loop. Every frame follows three steps in strict order: clear the back-buffer to a uniform color, write shape data into it, then flush the completed buffer to the visible console in a single atomic call. This separation ensures the screen is never updated mid-draw, eliminating flicker even at high frame rates.
+
+## The Three Steps
+
+<Steps>
+  <Step title="Clear — background()">
+    Call `game.graphics.background(whiteB)` at the start of every frame. Internally this iterates over every cell in the `CHAR_INFO*` array and writes a space character plus the given color attribute:
+
+    ```cpp
+    void GraphicsRenderer::background(short col) {
+        int total = ConsoleHandler::GetConsoleHeight()
+                  * ConsoleHandler::GetConsoleWidth();
+        for (int i = 0; i < total; i++) {
+            ConsoleHandler::GetBuffScreen()[i].Char.UnicodeChar = ' ';
+            ConsoleHandler::GetBuffScreen()[i].Attributes       = col;
+        }
+    }
+    ```
+
+    Passing `whiteB` produces a bright-white background. Any `ConsoleColor` constant or raw Windows attribute short works here.
+  </Step>
+  <Step title="Draw — draw()">
+    Call `game.graphics.draw(shape)` once per visible object. `GraphicsRenderer::draw` simply delegates to the shape's own virtual method:
+
+    ```cpp
+    void GraphicsRenderer::draw(Shape& s) {
+        s.draw();
+    }
+    ```
+
+    Each shape's `draw()` implementation computes which buffer cells it occupies and writes a Unicode character and a color attribute directly into the `CHAR_INFO` array. For a `Point` at `(x, y)`, the target index is `int(x) + ConsoleHandler::GetConsoleWidth() * int(y)`. Draw all shapes you want visible before moving to step three.
+  </Step>
+  <Step title="Display — display()">
+    Call `game.graphics.display()` once per frame after all draw calls. This forwards the entire back-buffer to the Windows Console API in one shot:
+
+    ```cpp
+    void GraphicsRenderer::display() {
+        WriteConsoleOutputW(
+            ConsoleHandler::GetOutHandle(),
+            ConsoleHandler::GetBuffScreen(),
+            ConsoleHandler::GetBufferSize(),
+            ConsoleHandler::GetCharacterPos(),
+            ConsoleHandler::GetRectWin()
+        );
+    }
+    ```
+
+    `WriteConsoleOutputW` copies the full `CHAR_INFO` array to the visible screen atomically. Only after this call does the user see any change.
+  </Step>
+</Steps>
+
+## Why Double-Buffering
+
+<Note>
+Without double-buffering, each `draw()` call would update the visible console immediately, meaning a fast-moving eye could catch a frame halfway through — some shapes drawn, others not yet. `WriteConsoleOutputW` copies the entire `CHAR_INFO` back-buffer to the visible console in a single API call, so the transition from one frame to the next is instantaneous and tear-free. The user always sees a complete, consistent frame.
+</Note>
+
+## The display() Implementation
+
+The exact source of `GraphicsRenderer::display()` from `include/GraphicsRenderer.cpp`:
+
+```cpp
+void GraphicsRenderer::display() {
+    WriteConsoleOutputW(
+        ConsoleHandler::GetOutHandle(),
+        ConsoleHandler::GetBuffScreen(),
+        ConsoleHandler::GetBufferSize(),
+        ConsoleHandler::GetCharacterPos(),
+        ConsoleHandler::GetRectWin()
+    );
+}
+```
+
+| Argument | Source | Description |
+|---|---|---|
+| `GetOutHandle()` | `ConsoleHandler` | `HANDLE` to `STD_OUTPUT_HANDLE` |
+| `GetBuffScreen()` | `ConsoleHandler` | Pointer to the `CHAR_INFO[]` back-buffer |
+| `GetBufferSize()` | `ConsoleHandler` | `COORD{console_width, console_height}` |
+| `GetCharacterPos()` | `ConsoleHandler` | `COORD{0, 0}` — write starts at the buffer origin |
+| `GetRectWin()` | `ConsoleHandler` | `SMALL_RECT{0, 0, width-1, height-1}` — destination on screen |
+
+## Buffer Indexing
+
+The back-buffer is a flat, one-dimensional `CHAR_INFO` array of size `console_width × console_height`. The cell at console coordinates `(x, y)` maps to:
+
+```
+index = x + (ConsoleHandler::GetConsoleWidth() * y)
+```
+
+Here is how `Point::draw()` uses this formula to write a single character into the buffer:
+
+```cpp
+ConsoleHandler::GetBuffScreen()[int(x) + ConsoleHandler::GetConsoleWidth() * int(y)].Char.UnicodeChar = character;
+ConsoleHandler::GetBuffScreen()[int(x) + ConsoleHandler::GetConsoleWidth() * int(y)].Attributes       = color;
+```
+
+`Char.UnicodeChar` carries the Unicode code point (the default solid block is `0x2588` — `█`). `Attributes` is the packed Windows console color short combining foreground and background masks. All coordinate values are `float` internally and are truncated to `int` at the moment of indexing.
+
+## Delta-Time Animation
+
+Shapes can be moved by a fixed pixel offset per frame, but the speed will then depend on how fast the loop runs. Use `TimeManager` to measure the real elapsed time each frame and multiply velocities by that value, giving frame-rate independent motion:
+
+```cpp
+Fazen game(100, 100);
+Box   box(10, 10, 10, 5, redF);
+game.timer.Reset();
+
+while (!game.keyboardHandler.CheckForUserExit()) {
+    float dt = game.timer.GetElapsedTime();  // seconds since last call
+    game.timer.Reset();
+
+    game.graphics.background(whiteB);
+    game.graphics.draw(box);
+    box.translate(20.0f * dt, 0.0f);         // 20 cells/second regardless of frame rate
+    game.graphics.display();
+}
+```
+
+`GetElapsedTime()` uses `std::chrono::system_clock` under the hood. It measures the duration between the previous call and now, then advances its internal baseline. Calling `Reset()` after reading the value keeps the clock fresh for the next frame.
+
+<Note>
+The `TimeManager` constructor calls `Reset()` automatically, so the timer is ready from the moment `Fazen` is constructed. You only need to call `Reset()` manually in the loop body when you want to restart the measurement each frame.
+</Note>
+
+## Complete Frame Loop Reference
+
+| Method | Description |
+|---|---|
+| `game.graphics.background(short col)` | Fill every buffer cell with a space and the given color attribute |
+| `game.graphics.draw(Shape& s)` | Rasterize a shape into the back-buffer by calling its `draw()` |
+| `game.graphics.display()` | Flush the back-buffer to the console via `WriteConsoleOutputW` |
+| `game.timer.Reset()` | Restart the internal `std::chrono` clock |
+| `game.timer.GetElapsedTime()` | Return seconds elapsed since the last `Reset()` (or construction) |
+| `game.keyboardHandler.CheckForUserExit()` | Return `true` when the Escape key is held, signalling loop exit |

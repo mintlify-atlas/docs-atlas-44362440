@@ -1,0 +1,70 @@
+---
+title: "Circle Class — Filled Circle Drawing API"
+sidebarTitle: "Circle"
+description: "Circle fills a circular region in the console buffer using a distance formula. Configure center, radius, color, and Unicode fill character."
+---
+
+`Circle` draws a filled disk by iterating every integer cell within the axis-aligned bounding square around the center `(xc, yc)` and placing a `Point` for each cell whose distance from the center satisfies `dx² + dy² ≤ radius²`. This approach is simple and correct without trigonometry, producing fully filled circles rather than outlines. Because `Point::draw()` enforces the safe-margin bounds check, cells near the console edges are automatically skipped.
+
+## Header
+
+```cpp
+#include "include/headers/Circle.h"
+```
+
+## Constructor
+
+```cpp
+explicit Circle(float xc, float yc, float radius, short color, short character = 0x2588);
+```
+
+<ParamField path="xc" type="float" required>
+  Column position of the circle's center.
+</ParamField>
+
+<ParamField path="yc" type="float" required>
+  Row position of the circle's center.
+</ParamField>
+
+<ParamField path="radius" type="float" required>
+  Radius in console cells. The bounding square scanned is `(xc - radius, yc - radius)` to `(xc + radius, yc + radius)`.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value applied to every filled cell (e.g. `yellowF`, `blueF`).
+</ParamField>
+
+<ParamField path="character" type="short" default="0x2588">
+  Unicode code point written into each filled cell. Defaults to `0x2588` (█).
+</ParamField>
+
+## Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `draw()` | `void` | Iterates the bounding square cell by cell and places a `Point` for each cell satisfying `dx² + dy² ≤ radius²`. |
+| `translate(float dx, float dy)` | `void` | Shifts the center by `dx`/`dy`. Applied only when the entire circle (center ± radius) stays within console bounds. |
+| `setCenterX(float)` / `getCenterX()` | `void` / `float` | Circle center X. |
+| `setCenterY(float)` / `getCenterY()` | `void` / `float` | Circle center Y. |
+| `setRadius(float)` / `getRadius()` | `void` / `float` | Circle radius. |
+| `setColor(short)` / `getColor()` | `void` / `float` | Fill color attribute. |
+| `setCharacter(short)` / `getCharacter()` | `void` / `float` | Fill character code point. |
+
+## Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+Circle sun(50.0f, 10.0f, 8.0f, yellowF);     // yellow filled circle near top-center
+Circle planet(30.0f, 30.0f, 4.0f, blueF);   // smaller blue circle
+
+game.graphics.draw(sun);
+game.graphics.draw(planet);
+
+// Orbit the planet around the sun (simplified linear drift):
+planet.translate(0.5f, 0.0f);
+```
+
+<Note>
+Console cells are not square pixels — a typical console font is roughly twice as tall as it is wide. As a result, circles may appear horizontally stretched (elliptical) depending on the font aspect ratio. To compensate visually, reduce the effective X radius or choose a font with a 1:1 aspect ratio such as a square pixel font.
+</Note>

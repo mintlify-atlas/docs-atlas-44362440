@@ -1,47 +1,119 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Fazen2d in 5 Minutes"
+sidebarTitle: "Quickstart"
+description: "Build and run your first Fazen2d console graphics program — install, compile, and animate shapes in the Windows console in under five minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
+In this quickstart you'll get Fazen2d running on your machine, compile the project with a single command, and have an animated program drawing a red box, a blue line, and a green circle on a white console background — all exitable with the **ESC** key. No external libraries, no package manager, just a compiler and `make`.
 
 ## Prerequisites
 
-Before you begin, you must have:
+Before you begin, make sure you have the following available on your Windows machine:
 
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
+- **Windows 10 or later** — Fazen2d uses Win32 Console APIs that require a modern Windows console host.
+- **g++ with C++11 support** — available via [MinGW](https://www.mingw-w64.org/) or [MSYS2](https://www.msys2.org/). The Makefile compiles with `g++ -std=c++11`.
+- **GNU Make** — included with MinGW/MSYS2, or installable via [Chocolatey](https://chocolatey.org/) (`choco install make`). If you prefer, you can compile manually without `make` (see Step 1 below).
 
-## Get started
+## Step 1: Clone, Build, and Run
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Clone the repository">
+    Open a Windows command prompt or Git Bash in the directory where you want to place the project, then run:
 
     ```bash
-    npm install your-package
+    git clone https://github.com/adi3120/Fazen2d.git && cd Fazen2d
+    ```
+
+    This downloads the full source tree, including all headers under `include/headers/`, all implementation files under `include/`, `main.cpp`, and the `Makefile`.
+  </Step>
+
+  <Step title="Build with Make">
+    From inside the `Fazen2d` directory, run:
+
+    ```bash
+    make
+    ```
+
+    The Makefile compiles every `.cpp` file found under `include/` (one per subsystem — `Box.cpp`, `Circle.cpp`, `ConsoleHandler.cpp`, and so on) together with `main.cpp`, all with the `-std=c++11` flag, and links the resulting object files into an executable named **`a`** in the project root.
+
+    If you don't have `make` installed, you can compile manually:
+
+    ```bash
+    g++ -std=c++11 include/*.cpp main.cpp -o a
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Run the demo">
+    Launch the built executable from the same console window:
 
     ```bash
-    your-cli init
+    .\a
     ```
-  </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
-    ```
+    On some MinGW setups the output file may be named `a.exe`; in that case run `a.exe` directly. The console buffer will initialize and the animation will begin immediately. Press **ESC** to exit cleanly.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Your First Program
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+The code below is a lightly annotated version of `main.cpp` — the canonical Fazen2d demo. Every Fazen2d program follows the same three-step loop inside `while (true)`: **clear → draw → display**.
+
+```cpp main.cpp
+#include "include/headers/Fazen.h"
+
+int main() {
+    Fazen game(100, 100);          // Initialize 100x100 console buffer
+
+    Box    box(0, 20, 20, 60, redF);
+    Line   line(0, 0, 10, 10, blueF);
+    Circle circle(20, 20, 10, greenF);
+
+    while (true) {
+        game.graphics.background(whiteB);   // Clear to white
+        game.graphics.draw(box);
+        game.graphics.draw(line);
+        game.graphics.draw(circle);
+
+        box.translate(0.01f, 0.01f);        // Animate
+        line.translate(0.1f,  0.1f);
+        circle.translate(0.1f, 0.1f);
+
+        game.graphics.display();            // Flush buffer
+
+        if (game.keyboardHandler.CheckForUserExit()) break;
+    }
+}
+```
+
+Here is what each part does:
+
+| Line | What it does |
+|---|---|
+| `Fazen game(100, 100)` | Constructs the engine, allocating a `CHAR_INFO[100 × 100]` back-buffer and configuring the console font and window size via `ConsoleHandler`. |
+| `Box / Line / Circle` constructors | Create shape objects with a position, size or endpoints, and a `ConsoleColor` constant from `Colors.h` (`redF`, `blueF`, `greenF`). |
+| `game.graphics.background(whiteB)` | Fills every cell in the back-buffer with a space character at the `whiteB` (white background) attribute — effectively clearing the screen each frame. |
+| `game.graphics.draw(shape)` | Calls the shape's `draw()` override, which writes Unicode characters and color attributes into the back-buffer cells that the shape occupies. |
+| `shape.translate(dx, dy)` | Shifts the shape's position by `(dx, dy)` console cells per frame, producing smooth diagonal movement. |
+| `game.graphics.display()` | Flushes the entire back-buffer to the visible console in one call to `WriteConsoleOutputW`, ensuring a flicker-free update. |
+| `game.keyboardHandler.CheckForUserExit()` | Checks whether the **ESC** key (`VK_ESCAPE`) is currently pressed via `GetAsyncKeyState`; returns `true` to break the loop and exit. |
+
+## What You Should See
+
+Once the program is running, the console will show a **white background** filling the entire window. A **red filled rectangle** (the `Box`) glides diagonally down and to the right at a slow pace. A **blue diagonal line** streaks across the screen moving faster than the box. A **green filled circle** also travels diagonally, moving at the same speed as the line. All three shapes start in the upper-left region of the buffer and migrate toward the lower-right corner over time. The animation runs continuously at the speed your CPU can drive the render loop. Press **ESC** at any point to exit the program cleanly.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="System Requirements" icon="computer" href="/setup/installation">
+    Review the full list of OS, compiler, and console requirements before deploying Fazen2d in your own project.
+  </Card>
+  <Card title="Build Guide" icon="hammer" href="/setup/build">
+    Learn how the Makefile works in detail, how to do a manual compilation, and how to integrate Fazen2d source into an existing project.
+  </Card>
+  <Card title="Frame Loop" icon="rotate" href="/concepts/frame-loop">
+    Understand the clear–draw–display cycle, double-buffering internals, and how to add frame-rate-independent timing to your loop.
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/fazen">
+    Explore the full public API — every class, constructor, method signature, and color constant available in Fazen2d.
+  </Card>
+</CardGroup>

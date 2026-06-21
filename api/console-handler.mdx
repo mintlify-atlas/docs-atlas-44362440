@@ -1,0 +1,92 @@
+---
+title: "ConsoleHandler Class — Buffer and Console Setup API"
+sidebarTitle: "ConsoleHandler"
+description: "ConsoleHandler allocates and manages the CHAR_INFO back-buffer. Reference for constructor, buffer accessors, and console dimension getters."
+---
+
+`ConsoleHandler` sets up the Windows console, allocates the `CHAR_INFO` back-buffer, and exposes static accessors used by shapes and the renderer throughout the engine. Every member variable is stored as static storage, meaning all parts of the engine read from and write to the same shared state regardless of where they access it.
+
+## Header
+
+```cpp
+#include "include/headers/ConsoleHandler.h"
+```
+
+This header is included automatically when you include `Fazen.h` — you do not need to add it separately in most projects.
+
+## Constructor
+
+```cpp
+ConsoleHandler(int s_width, int s_height);
+```
+
+Allocates the `CHAR_INFO*` back-buffer of size `s_width * s_height`, acquires the standard output and input handles, sets the console screen buffer size, configures the console window rectangle, and calls `make2DConsole(8, 8)` to set an 8×8 pixel font.
+
+<ParamField path="s_width" type="int" required>
+  Width of the console in character columns. Stored in the static field
+  `console_width` and used as the stride for all buffer index calculations.
+</ParamField>
+
+<ParamField path="s_height" type="int" required>
+  Height of the console in character rows. Stored in the static field
+  `console_height` and used to compute the total buffer element count.
+</ParamField>
+
+## Static Methods — Buffer Access
+
+These methods return the core Win32 objects that `GraphicsRenderer::display()` passes directly to `WriteConsoleOutputW`.
+
+| Method | Return Type | Description |
+|---|---|---|
+| `GetBuffScreen()` | `CHAR_INFO*` | Returns the back-buffer array. Each element holds a Unicode character and a Windows color attribute for one console cell. |
+| `GetBufferSize()` | `COORD` | Returns `{console_width, console_height}` as a `COORD`, used as the buffer dimensions argument for `WriteConsoleOutputW`. |
+| `GetCharacterPos()` | `COORD` | Returns the write origin `{0, 0}` — the top-left cell within the back-buffer from which output begins. |
+| `GetRectWin()` | `SMALL_RECT*` | Returns a pointer to the destination rectangle `{0, 0, width-1, height-1}` passed to `WriteConsoleOutputW`. |
+| `GetOutHandle()` | `HANDLE` | Standard output handle (`STD_OUTPUT_HANDLE`). Used for all console write and font configuration calls. |
+| `GetInHandle()` | `HANDLE` | Standard input handle (`STD_INPUT_HANDLE`). Used by `MouseHandler` and `KeyboardHandler` to read input events. |
+
+## Static Methods — Dimensions
+
+| Method | Return Type | Description |
+|---|---|---|
+| `GetConsoleWidth()` | `int` | Returns the number of character columns in the console buffer. |
+| `GetConsoleHeight()` | `int` | Returns the number of character rows in the console buffer. |
+| `GetFontWidth()` | `int` | Returns the pixel width of each character cell as set during `make2DConsole`. Defaults to `8`. |
+| `GetFontHeight()` | `int` | Returns the pixel height of each character cell as set during `make2DConsole`. Defaults to `8`. |
+
+## Static Methods — Window Position
+
+These methods are used by `MouseHandler` to convert raw screen pixel coordinates into console cell coordinates.
+
+| Method | Return Type | Description |
+|---|---|---|
+| `GetWindowPos()` | `void` | Calls `GetWindowRect` on the console window and stores the resulting top-left pixel position in the static fields `consoleRangeStartx` and `consoleRangeStarty`. Call this before mapping mouse coordinates each frame. |
+| `GetconsoleRangeStartx()` | `int` | Returns the cached horizontal pixel offset of the console window's top-left corner on the screen. |
+| `GetconsoleRangeStarty()` | `int` | Returns the cached vertical pixel offset of the console window's top-left corner on the screen. |
+| `Getpoint()` | `POINT` | Returns the internally stored `POINT` struct used during window position tracking. |
+
+## Buffer Indexing
+
+The back-buffer is a flat, row-major array. To access the cell at column `x`, row `y`, use:
+
+```cpp
+ConsoleHandler::GetBuffScreen()[x + ConsoleHandler::GetConsoleWidth() * y]
+```
+
+Each `CHAR_INFO` element has two fields you will typically write:
+
+```cpp
+CHAR_INFO& cell = ConsoleHandler::GetBuffScreen()[x + ConsoleHandler::GetConsoleWidth() * y];
+cell.Char.UnicodeChar = L'█';   // character to display
+cell.Attributes       = redF;   // Windows console color attribute
+```
+
+## Warning
+
+<Warning>
+  `ConsoleHandler` uses exclusively static storage. Do not instantiate more than
+  once — the second constructor call overwrites the shared static state, including
+  the buffer pointer, handles, and dimensions set by the first. Doing so will
+  cause the previously allocated `CHAR_INFO` buffer to leak and leave the engine
+  in an inconsistent state.
+</Warning>

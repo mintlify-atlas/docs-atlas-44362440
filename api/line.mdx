@@ -1,0 +1,75 @@
+---
+title: "Line Class — Bresenham Line Drawing API"
+sidebarTitle: "Line"
+description: "Line draws a straight line between two console cells using Bresenham's algorithm. Supports color, custom characters, and sub-cell translation."
+---
+
+`Line` connects two console cell positions with a straight run of characters, computed using Bresenham's line algorithm. The algorithm selects the integer cell closest to the ideal line path at each step, producing crisp, gap-free diagonals and perfect horizontals or verticals without floating-point per-pixel math. Internally, `Line::draw()` creates temporary `Point` objects for each rasterized cell and delegates to `Point::draw()`, so Point's safe-margin bounds check applies to every cell along the line.
+
+## Header
+
+```cpp
+#include "include/headers/Line.h"
+```
+
+## Constructor
+
+```cpp
+Line(float x1, float y1, float x2, float y2, short color, short character = 0x2588);
+```
+
+<ParamField path="x1" type="float" required>
+  Column position of the first endpoint.
+</ParamField>
+
+<ParamField path="y1" type="float" required>
+  Row position of the first endpoint.
+</ParamField>
+
+<ParamField path="x2" type="float" required>
+  Column position of the second endpoint.
+</ParamField>
+
+<ParamField path="y2" type="float" required>
+  Row position of the second endpoint.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value applied to every cell along the line (e.g. `blueF`, `redF`).
+</ParamField>
+
+<ParamField path="character" type="short" default="0x2588">
+  Unicode code point written into each cell. Defaults to `0x2588` (█). Any valid `wchar_t`-range value is accepted.
+</ParamField>
+
+## Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `draw()` | `void` | Rasterizes the line from `(x1, y1)` to `(x2, y2)` using Bresenham's algorithm, placing a `Point` at each computed cell into the back-buffer. |
+| `translate(float dx, float dy)` | `void` | Shifts both endpoints by `dx`/`dy`. The move is applied only if all four resulting coordinates remain within console bounds and are non-negative. |
+| `setX1(float)` / `getX1()` | `void` / `float` | First endpoint X. |
+| `setY1(float)` / `getY1()` | `void` / `float` | First endpoint Y. |
+| `setX2(float)` / `getX2()` | `void` / `float` | Second endpoint X. |
+| `setY2(float)` / `getY2()` | `void` / `float` | Second endpoint Y. |
+| `setColor(short)` / `getColor()` | `void` / `float` | Color attribute applied to every cell. |
+| `setCharacter(short)` / `getCharacter()` | `void` / `float` | Unicode character code written at every cell. |
+
+## Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+Line diag(0.0f, 0.0f, 49.0f, 49.0f, blueF);    // blue diagonal across 50x50 area
+Line horiz(0.0f, 25.0f, 99.0f, 25.0f, redF);    // red horizontal midline
+
+game.graphics.draw(diag);
+game.graphics.draw(horiz);
+
+// Animate the diagonal downward:
+diag.translate(0.0f, 1.0f);
+```
+
+<Note>
+Bresenham's algorithm operates on integer cell positions internally. Sub-cell float values stored in the endpoints are truncated on each `draw()` call. This means fractional positions accumulate correctly for smooth `translate()`-driven animation, but the rendered position only changes when the truncated integer advances to the next cell.
+</Note>

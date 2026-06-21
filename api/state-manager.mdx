@@ -1,0 +1,83 @@
+---
+title: "StateManager Class — Global Coordinate Center API"
+sidebarTitle: "StateManager"
+description: "StateManager maintains a global center offset applied to all shape coordinates. Use setCenter, translateCoordinates, saveState, and restoreState for scene transforms."
+---
+
+`StateManager` holds a global `(center_x, center_y)` offset that is applied to every shape coordinate at draw time. When shapes call `translateCoordinates(x, y)` internally before writing to the buffer, it shifts their positions by this center. This lets you move the viewport or reposition groups of objects without modifying each shape's stored coordinates individually.
+
+## Header
+
+```cpp
+#include "include/headers/StateManager.h"  // included automatically via Fazen.h
+```
+
+## All Methods Are Static
+
+`StateManager` has no instance state that requires construction — all data is stored in `static` class members. Call every method directly on the class:
+
+```cpp
+StateManager::setCenter(50.0f, 25.0f);
+```
+
+No `StateManager` object needs to be created.
+
+## Methods
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `setCenter(float x, float y)` | `void` | Sets the global center offset to `(x, y)` |
+| `getCenterX()` | `float` | Returns the current center X |
+| `getCenterY()` | `float` | Returns the current center Y |
+| `translateCoordinates(float& x, float& y)` | `void` | Adds `(center_x, center_y)` to the passed coordinates in-place |
+| `saveState()` | `void` | Copies the current center to internal temp variables |
+| `restoreState()` | `void` | Restores the center from the saved temp variables |
+
+### `void setCenter(float x, float y)`
+
+Sets the static `center_x` and `center_y` fields. All subsequent `translateCoordinates` calls will apply this new offset until `setCenter` or `restoreState` changes it again.
+
+### `float getCenterX()` / `float getCenterY()`
+
+Return the current global center offset components. Useful for computing relative positions or displaying debug information.
+
+### `void translateCoordinates(float& x, float& y)`
+
+Adds `center_x` to `x` and `center_y` to `y` in-place. Called automatically by shape `draw()` implementations before writing to the frame buffer — you generally do not need to call this yourself.
+
+### `void saveState()`
+
+Copies `center_x` into `tempCenterx` and `center_y` into `tempCentery`. Only one level of save/restore is supported; calling `saveState()` a second time overwrites the previously saved values.
+
+### `void restoreState()`
+
+Copies `tempCenterx` back into `center_x` and `tempCentery` back into `center_y`, reverting to the state at the last `saveState()` call.
+
+## Example — Centering the Origin
+
+Place the coordinate origin at the center of a 100×50 console so that shapes at `(0, 0)` appear in the middle of the screen rather than the top-left corner.
+
+```cpp
+// Move coordinate origin to the center of a 100x50 console
+StateManager::setCenter(50.0f, 25.0f);
+
+Point origin(0.0f, 0.0f, whiteF);  // draws at console cell (50, 25)
+game.graphics.draw(origin);
+```
+
+## Example — Save and Restore
+
+Use `saveState` and `restoreState` to temporarily shift the center for a sub-group of shapes, then cleanly return to the previous offset.
+
+```cpp
+StateManager::setCenter(50.0f, 25.0f);
+
+StateManager::saveState();
+StateManager::setCenter(60.0f, 30.0f);   // temporary offset for sub-group
+// draw group ...
+StateManager::restoreState();             // back to (50, 25)
+```
+
+<Note>
+  `translateCoordinates` is called internally by shape `draw()` implementations before writing to the buffer. If you never call `setCenter`, the default center is `(0, 0)` — coordinates are passed through unchanged and the top-left corner of the console is the origin.
+</Note>

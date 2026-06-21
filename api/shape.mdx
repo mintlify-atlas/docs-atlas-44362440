@@ -1,0 +1,90 @@
+---
+title: "Shape Base Class — Drawable Primitive Interface"
+sidebarTitle: "Shape"
+description: "Shape is the abstract base class for all Fazen2d geometry primitives. Implement draw() and translate() to create custom drawable types."
+---
+
+`Shape` defines the polymorphic interface that every Fazen2d drawable must satisfy. `GraphicsRenderer::draw()` accepts a `Shape&`, so any class deriving from `Shape` works transparently with the renderer — you can store heterogeneous primitives in a single container and draw them all through one uniform call.
+
+## Header
+
+```cpp
+#include "include/headers/Shape.h"
+```
+
+`Shape.h` is included transitively through any concrete shape header (`Point.h`, `Line.h`, etc.) and through the top-level `Fazen.h` umbrella header.
+
+## Interface
+
+```cpp
+class Shape {
+public:
+    virtual void draw() = 0;
+    virtual void translate(float dx, float dy) = 0;
+    virtual ~Shape() = default;
+};
+```
+
+## Pure Virtual Methods
+
+| Method | Description |
+|---|---|
+| `draw()` | Writes shape characters and color attributes into the `ConsoleHandler` back-buffer. Called once per frame by the render loop. |
+| `translate(float dx, float dy)` | Moves the shape by `dx` columns and `dy` rows. Implementations are responsible for bounds checking against `ConsoleHandler::GetConsoleWidth()` and `ConsoleHandler::GetConsoleHeight()`. |
+
+## Built-in Implementations
+
+<CardGroup cols={2}>
+  <Card title="Point" href="/api/point">
+    Single character cell at a given (x, y) position with a chosen color and Unicode character.
+  </Card>
+  <Card title="Line" href="/api/line">
+    Straight line between two endpoints, rasterized with Bresenham's algorithm.
+  </Card>
+  <Card title="Box" href="/api/box">
+    Solid filled rectangle defined by an origin, width, height, color, and fill character.
+  </Card>
+  <Card title="Circle" href="/api/circle">
+    Filled circular region drawn using a per-cell distance formula over a bounding square.
+  </Card>
+  <Card title="Text" href="/api/text">
+    Wide-character string rendered into consecutive console cells at a given position.
+  </Card>
+  <Card title="Custom Shapes" href="/concepts/architecture">
+    Derive from `Shape` to build your own drawable primitives that work seamlessly with the renderer.
+  </Card>
+</CardGroup>
+
+## Custom Shape Example
+
+Derive publicly from `Shape`, store your geometry as member data, and implement both pure virtuals. Use `ConsoleHandler` to write directly into the back-buffer.
+
+```cpp
+#include "include/headers/Shape.h"
+
+class Cross : public Shape {
+    float cx, cy;
+    short color;
+public:
+    Cross(float cx, float cy, short color) : cx(cx), cy(cy), color(color) {}
+
+    void draw() override {
+        // Draw a 3x1 horizontal bar
+        for (int i = -1; i <= 1; i++) {
+            int px = (int)(cx + i);
+            int py = (int)cy;
+            if (px >= 0 && px < ConsoleHandler::GetConsoleWidth() &&
+                py >= 0 && py < ConsoleHandler::GetConsoleHeight()) {
+                ConsoleHandler::GetBuffScreen()[px + ConsoleHandler::GetConsoleWidth() * py]
+                    .Char.UnicodeChar = 0x2588;
+                ConsoleHandler::GetBuffScreen()[px + ConsoleHandler::GetConsoleWidth() * py]
+                    .Attributes = color;
+            }
+        }
+    }
+
+    void translate(float dx, float dy) override {
+        cx += dx; cy += dy;
+    }
+};
+```

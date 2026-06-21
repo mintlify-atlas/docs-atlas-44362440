@@ -1,0 +1,124 @@
+---
+title: "System Requirements and Installation for Fazen2d"
+sidebarTitle: "Installation"
+description: "Install Fazen2d on Windows by cloning the repository. Covers required tools, compiler setup, and project structure before you build."
+---
+
+Fazen2d has no package manager distribution — you clone the repository and compile it directly using a C++ toolchain. There are no third-party runtime dependencies beyond the Windows SDK that ships with MinGW or Visual Studio Build Tools, which keeps the setup process short and the project entirely self-contained.
+
+## System Requirements
+
+| Requirement   | Details                                                              |
+|---------------|----------------------------------------------------------------------|
+| OS            | Windows 10 or later                                                  |
+| Compiler      | `g++` with C++11 support (MinGW / MSYS2 recommended)                |
+| Build tool    | GNU Make (`make` / `mingw32-make`) **or** a manual `g++` invocation |
+| Console       | `cmd.exe` or a compatible terminal configured with a Unicode font    |
+
+## Installing the Toolchain
+
+<AccordionGroup>
+  <Accordion title="MinGW / MSYS2 (recommended)">
+    MSYS2 is the easiest way to get a current `g++` and GNU Make on Windows.
+
+    1. Download the installer from [https://www.msys2.org](https://www.msys2.org) and run it.
+    2. Open the **MSYS2 UCRT64** shell and update the package database:
+       ```bash
+       pacman -Syu
+       ```
+    3. Install the compiler and Make:
+       ```bash
+       pacman -S mingw-w64-ucrt-x86_64-gcc make
+       ```
+    4. Add the MinGW `bin` directory to your Windows **PATH** (e.g., `C:\msys64\ucrt64\bin`) so that `g++` and `make` are available in `cmd.exe` and PowerShell.
+    5. Verify the installation:
+       ```bash
+       g++ --version
+       make --version
+       ```
+  </Accordion>
+
+  <Accordion title="Visual Studio Build Tools">
+    Fazen2d's Makefile and documented build commands are written for the `g++` compiler. The repository does **not** include an officially documented MSVC workflow — no `.vcxproj` or `CMakeLists.txt` is provided.
+
+    If you already have Visual Studio installed and prefer to stay in that environment, you can adapt the build manually (compile each `.cpp` with `cl /std:c++11 /c` and link with `link`), but you are on your own for that path. For the smoothest experience, install MinGW or MSYS2 alongside your Visual Studio installation and use `g++` as described above.
+  </Accordion>
+</AccordionGroup>
+
+## Cloning Fazen2d
+
+Open a terminal in the directory where you want to work, then run:
+
+```bash
+git clone https://github.com/adi3120/Fazen2d.git
+```
+
+This creates a `Fazen2d/` folder containing the full source tree. No additional `npm install`, `pip install`, or similar step is required.
+
+## Repository Layout
+
+```text
+Fazen2d/
+├── include/
+│   ├── headers/            ← Public API headers (.h)
+│   │   ├── Fazen.h
+│   │   ├── Box.h
+│   │   ├── Circle.h
+│   │   ├── Colors.h
+│   │   ├── ConsoleHandler.h
+│   │   ├── GraphicsRenderer.h
+│   │   ├── KeyboardHandler.h
+│   │   ├── Line.h
+│   │   ├── MathUtils.h
+│   │   ├── MouseHandler.h
+│   │   ├── Point.h
+│   │   ├── Shape.h
+│   │   ├── StateManager.h
+│   │   ├── Text.h
+│   │   └── TimeManager.h
+│   ├── Box.cpp             ← Implementation units
+│   ├── Circle.cpp
+│   ├── Colors.cpp
+│   ├── ConsoleHandler.cpp
+│   ├── Fazen.cpp
+│   ├── GraphicsRenderer.cpp
+│   ├── KeyboardHandler.cpp
+│   ├── Line.cpp
+│   ├── MathUtils.cpp
+│   ├── MouseHandler.cpp
+│   ├── Point.cpp
+│   ├── StateManager.cpp
+│   └── TimeManager.cpp
+├── main.cpp                ← Demo entry point
+└── Makefile                ← Build script
+```
+
+**`include/headers/`** is the public API surface. Every class declaration, enum, and interface lives here. Your code should `#include` paths under this directory.
+
+**`include/*.cpp`** are the paired implementation files. Each `.cpp` is named after its corresponding header (e.g., `Box.cpp` implements `Box.h`) and is compiled automatically by the Makefile — you do not need to list them individually.
+
+**`main.cpp`** is the demo entry point. It instantiates the `Fazen` engine, runs the render loop, and demonstrates the built-in shapes in motion. It is the natural place to start experimenting.
+
+## Including Fazen2d in Your Project
+
+You have two practical options:
+
+**Option 1 — Use the repository as-is (fastest start)**
+
+Write your application logic directly in `main.cpp`. The Makefile compiles everything in one step, so your code is automatically linked against all subsystems. This is ideal when you are learning the API or prototyping.
+
+**Option 2 — Copy `include/` into your own project**
+
+Copy the entire `include/` directory into your project tree, then point your compiler at it:
+
+```cpp
+#include "include/headers/Fazen.h"
+```
+
+Compile all `include/*.cpp` files together with your own source files:
+
+```bash
+g++ -std=c++11 include/*.cpp your_program.cpp -o your_program.exe
+```
+
+This lets you version your project independently and keep Fazen2d as a vendored dependency.

@@ -1,0 +1,64 @@
+---
+title: "Fazen Class — Engine Aggregator API Reference"
+sidebarTitle: "Fazen"
+description: "The Fazen class initializes all subsystems and exposes console, graphics, input, and timing as public members. Reference for constructor and members."
+---
+
+`Fazen` is the entry point for every Fazen2d application. Constructing it initializes `ConsoleHandler`, `GraphicsRenderer`, keyboard, mouse, and timer subsystems — giving you a fully configured console window, a pre-allocated back-buffer, and ready-to-use input polling in a single line of code.
+
+## Header
+
+```cpp
+#include "include/headers/Fazen.h"
+```
+
+## Constructor
+
+```cpp
+Fazen(int s_width, int s_height);
+```
+
+<ParamField path="s_width" type="int" required>
+  Number of console columns. Sets the horizontal extent of the console buffer and
+  window. Passed directly to `ConsoleHandler` during initialization.
+</ParamField>
+
+<ParamField path="s_height" type="int" required>
+  Number of console rows. Sets the vertical extent of the console buffer and
+  window. Passed directly to `ConsoleHandler` during initialization.
+</ParamField>
+
+## Public Members
+
+| Member | Type | Description |
+|---|---|---|
+| `console` | `ConsoleHandler` | Manages console buffer setup and dimensions. Holds the `CHAR_INFO` back-buffer and all static state used throughout the engine. |
+| `graphics` | `GraphicsRenderer` | Background clear, draw dispatch, and buffer flush. Orchestrates each frame's render pipeline. |
+| `keyboardHandler` | `KeyboardHandler` | Key press and release queries. Use `CheckForUserExit()` to detect the user closing or pressing the exit key. |
+| `mouseHandler` | `MouseHandler` | Mouse position and click state. Reads raw input events from the console input handle. |
+| `timer` | `TimeManager` | Frame elapsed time measurement. Use for frame-rate-independent movement and animation. |
+
+## Usage Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+int main() {
+    Fazen game(100, 50);   // 100 cols, 50 rows
+
+    while (!game.keyboardHandler.CheckForUserExit()) {
+        game.graphics.background(whiteB);
+        // ... draw shapes
+        game.graphics.display();
+    }
+}
+```
+
+## Notes
+
+<Note>
+  Only one `Fazen` instance should exist per application because `ConsoleHandler`
+  uses static state. Creating two instances with different dimensions produces
+  undefined behavior — the second constructor call will silently overwrite the
+  shared static fields (handles, buffer pointer, and dimensions) set by the first.
+</Note>

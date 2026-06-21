@@ -1,0 +1,150 @@
+---
+title: "Write Your First Fazen2d Console Graphics Program"
+sidebarTitle: "First Program"
+description: "Step-by-step guide to writing a Fazen2d program from scratch — initialize the engine, draw shapes, animate them, and respond to input."
+---
+
+This guide walks you through building a complete interactive Fazen2d program from scratch, going beyond the bundled `main.cpp` demo. By the end you will understand how to initialize the engine, compose shapes, drive the render loop, and let the user exit cleanly — the foundation of every Fazen2d application.
+
+## Program Structure
+
+<Steps>
+  <Step title="Include the umbrella header">
+    Add a single `#include` at the top of your source file:
+
+    ```cpp
+    #include "include/headers/Fazen.h"
+    ```
+
+    `Fazen.h` is an umbrella header that transitively pulls in every Fazen2d subsystem — `ConsoleHandler`, `GraphicsRenderer`, `KeyboardHandler`, `MouseHandler`, `TimeManager`, `StateManager`, `MathUtils`, all color constants, and all shape headers (`Box`, `Circle`, `Line`, `Point`, `Text`). You do not need to include any of those individually for a typical program.
+  </Step>
+
+  <Step title="Initialize the Fazen engine">
+    Construct a `Fazen` object, passing the width and height of your console buffer in **character cells**:
+
+    ```cpp
+    Fazen game(80, 40);
+    ```
+
+    The constructor internally instantiates a `ConsoleHandler` that allocates the back-buffer (`CHAR_INFO*`), configures the console font, sets the window size, and acquires the output and input handles. All other subsystems (`graphics`, `keyboardHandler`, `mouseHandler`, `timer`) are ready to use immediately after construction as public members of `game`.
+
+    Choose dimensions that fit comfortably in your terminal. Requesting a buffer larger than the current console window size may clip the output or resize the window automatically.
+  </Step>
+
+  <Step title="Create shapes">
+    Instantiate shapes using their constructors. Every shape accepts a position, size parameters, and a `short` color value from the `ConsoleColor` enum:
+
+    ```cpp
+    // Box(x, y, width, height, color)
+    Box box(10, 5, 20, 10, redF);
+
+    // Circle(centerX, centerY, radius, color)
+    Circle circle(50, 20, 8, greenF);
+
+    // Text(x, y, wstring, color)
+    Text label(2, 1, L"Score: 0", whiteF);
+    ```
+
+    Shapes are plain value objects — they hold their own position state. `translate(dx, dy)` accumulates floating-point offsets that are truncated to integers when the shape writes into the buffer.
+  </Step>
+
+  <Step title="Run the render loop">
+    Every Fazen2d program follows the same three-step cycle inside a loop:
+
+    ```cpp
+    // 1. Clear the back-buffer to a solid background color
+    game.graphics.background(whiteB);
+
+    // 2. Draw all shapes into the back-buffer
+    game.graphics.draw(box);
+    game.graphics.draw(circle);
+    game.graphics.draw(label);
+
+    // 3. Move shapes for the next frame
+    box.translate(0.4f, 0.0f);
+
+    // 4. Flush the back-buffer to the console in one atomic write
+    game.graphics.display();
+    ```
+
+    `background()` must be called **first** in every iteration; it overwrites the entire buffer, erasing the previous frame. `display()` must be called **last**; it sends the completed buffer to the Windows console via `WriteConsoleOutputW`.
+  </Step>
+
+  <Step title="Handle ESC exit with CheckForUserExit()">
+    Use `keyboardHandler.CheckForUserExit()` as your loop condition rather than `true`. It polls `VK_ESCAPE` via `GetAsyncKeyState` and returns `true` the moment the user holds the Escape key:
+
+    ```cpp
+    while (!game.keyboardHandler.CheckForUserExit()) {
+        // ... render loop body ...
+    }
+    ```
+
+    This gives users a reliable, low-latency exit path without requiring any platform-specific signal handling on your part.
+  </Step>
+</Steps>
+
+## Complete Example
+
+The program below draws a bouncing box, displays a persistent label, and exits when the user presses ESC. It demonstrates all five steps above working together.
+
+```cpp
+#include "include/headers/Fazen.h"
+
+int main() {
+    // Initialize a 80×40 console buffer
+    Fazen game(80, 40);
+
+    // Create a red filled box at (5, 5) with size 10×5
+    Box  box(5, 5, 10, 5, redF);
+
+    // Create a white text label near the top-left corner
+    Text label(2, 1, L"Press ESC to quit", whiteF);
+
+    // Velocity of the box in console cells per frame
+    float vx = 0.3f, vy = 0.2f;
+
+    while (!game.keyboardHandler.CheckForUserExit()) {
+        // 1. Erase previous frame with a white background
+        game.graphics.background(whiteB);
+
+        // 2. Draw shapes into the back-buffer
+        game.graphics.draw(box);
+        game.graphics.draw(label);
+
+        // 3. Advance the box position by the current velocity
+        box.translate(vx, vy);
+
+        // 4. Reverse horizontal velocity when box hits left or right edge
+        if (box.getPosX() <= 0 || box.getPosX() + box.getWidth() >= 80)  vx = -vx;
+
+        // 5. Reverse vertical velocity when box hits top or bottom edge
+        if (box.getPosY() <= 0 || box.getPosY() + box.getHeight() >= 40) vy = -vy;
+
+        // 6. Flush the completed back-buffer to the visible console
+        game.graphics.display();
+    }
+}
+```
+
+## Key Observations
+
+- **Call `background()` at the top of every frame.** `GraphicsRenderer::background()` fills the entire `CHAR_INFO` array with space characters at the given color attribute. Skipping it causes shape trails to accumulate across frames because the buffer is never cleared.
+- **Float positions are truncated to integers internally.** `translate(dx, dy)` accumulates the floating-point delta into the shape's `x` and `y` fields, but when `draw()` writes into the buffer it casts coordinates to `int` for the array index calculation (`x + width * y`). Use small float deltas (e.g., `0.1f`–`0.5f`) to produce smooth sub-cell animation.
+- **Shapes are not automatically clipped beyond console edges.** If a shape's computed buffer index falls outside the allocated `CHAR_INFO` array, the write is out of bounds. Guard every `translate()` call with boundary checks (as the bouncing box example above does) to keep positions within `[0, width)` × `[0, height)`.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Frame Loop Internals" icon="rotate" href="/concepts/frame-loop">
+    Understand how `background()`, `draw()`, and `display()` interact with the `CHAR_INFO` back-buffer and the Win32 `WriteConsoleOutputW` API.
+  </Card>
+  <Card title="Coordinate System" icon="arrows-up-down-left-right" href="/concepts/coordinate-system">
+    Learn how console cell coordinates map to the back-buffer index, and how `StateManager` applies a global center offset.
+  </Card>
+  <Card title="GraphicsRenderer API" icon="paintbrush" href="/api/graphics-renderer">
+    Full reference for `background()`, `draw()`, and `display()` including parameter types and internal behavior.
+  </Card>
+  <Card title="Keyboard Input" icon="keyboard" href="/api/keyboard-handler">
+    Explore `IsKeyPressed()`, `IsKeyReleased()`, and `CheckForUserExit()` for richer interactive control schemes.
+  </Card>
+</CardGroup>

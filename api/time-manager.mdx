@@ -1,0 +1,59 @@
+---
+title: "TimeManager Class — Frame Timing and Delta Time API"
+sidebarTitle: "TimeManager"
+description: "TimeManager uses std::chrono to measure elapsed time between frames. Use GetElapsedTime() and Reset() for delta-time based animation."
+---
+
+`TimeManager` provides frame-to-frame elapsed time measurement using `std::chrono::system_clock`. It enables frame-rate independent animation so that movement speed stays consistent regardless of how fast or slow the rendering loop runs. Access it via `game.timer`.
+
+## Header
+
+```cpp
+#include "include/headers/TimeManager.h"  // included automatically via Fazen.h
+```
+
+## Constructor
+
+### `TimeManager()`
+
+Initializes both internal `time_point` values by calling `Reset()` during construction. The timer is ready to use immediately after the `Game` object is created.
+
+## Methods
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `Reset()` | `void` | Records the current time as the new reference point |
+| `GetElapsedTime()` | `float` | Returns seconds elapsed since the last `Reset()` call |
+
+### `void Reset()`
+
+Sets the internal reference time point `tp1` to `std::chrono::system_clock::now()`. Call this at the beginning of each frame to start the measurement for the next frame's delta calculation.
+
+### `float GetElapsedTime()`
+
+Captures `std::chrono::system_clock::now()` into `tp2`, computes the duration `tp2 - tp1` as a `float` in seconds, and returns it. Internally advances `tp1` to `tp2` after measuring, so successive calls measure from the last sample point.
+
+## Delta-Time Pattern
+
+Without delta time, an object moving one cell per frame moves faster on a 120 FPS machine than on a 30 FPS machine. Multiplying displacement by the elapsed time since the last frame normalizes speed to **cells per second**, making behaviour consistent across hardware.
+
+```cpp
+game.timer.Reset();
+
+while (!game.keyboardHandler.CheckForUserExit()) {
+    float dt = game.timer.GetElapsedTime();
+    game.timer.Reset();
+
+    game.graphics.background(whiteB);
+
+    box.translate(50.0f * dt, 0.0f);  // 50 cells per second, independent of FPS
+    game.graphics.draw(box);
+    game.graphics.display();
+}
+```
+
+In this pattern, `GetElapsedTime()` returns the wall-clock seconds that the previous iteration took (including rendering), and `Reset()` immediately starts measuring the next frame.
+
+<Tip>
+  Call `Reset()` at the very start of the loop — before drawing — not at the end. This way the measured delta includes rendering time as well as logic time, giving the most accurate per-frame interval for smooth, consistent motion.
+</Tip>

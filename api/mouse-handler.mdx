@@ -1,0 +1,95 @@
+---
+title: "MouseHandler Class — Mouse Position and Click API"
+sidebarTitle: "MouseHandler"
+description: "MouseHandler maps screen pixel coordinates to console cell positions and tracks left and right button press and click states each frame."
+---
+
+`MouseHandler` converts the Windows cursor position from screen pixels to console cell coordinates using `ConsoleHandler`'s font size and window origin. Rather than returning raw pixel values, it translates cursor position into the same cell-unit space your shapes occupy, making collision and placement checks straightforward. Access it via `game.mouseHandler`.
+
+## Header
+
+```cpp
+#include "include/headers/MouseHandler.h"  // included automatically via Fazen.h
+```
+
+<Important>
+  Call `UpdateMouseState()` once at the **start** of each frame — before querying any click or press state — so that all button checks within the same frame are consistent.
+</Important>
+
+## Methods
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `GetMouseX()` | `float` | Returns cursor X in console cell units |
+| `GetMouseY()` | `float` | Returns cursor Y in console cell units |
+| `UpdateMouseState()` | `void` | Refreshes `leftButtonPressed` / `rightButtonPressed` internal state |
+| `IsLeftMousePressed()` | `bool` | `true` while the left button is held |
+| `IsRightMousePressed()` | `bool` | `true` while the right button is held |
+| `IsLeftMouseClicked()` | `bool` | `true` on the frame the left button transitions to pressed |
+| `IsRightMouseClicked()` | `bool` | `true` on the frame the right button transitions to pressed |
+
+### `float GetMouseX()`
+
+Returns the current cursor X position in console cell units. Internally calls `GetCursorPos` to obtain the screen pixel position, then maps it through the console window's horizontal range using `ConsoleHandler::GetconsoleRangeStartx()` and `ConsoleHandler::GetFontWidth()`.
+
+### `float GetMouseY()`
+
+Returns the current cursor Y position in console cell units. Uses the same mapping approach as `GetMouseX()` but along the vertical axis with `ConsoleHandler::GetconsoleRangeStarty()` and `ConsoleHandler::GetFontHeight()`.
+
+### `void UpdateMouseState()`
+
+Samples `VK_LBUTTON` and `VK_RBUTTON` via `GetAsyncKeyState` and stores the results in the internal `leftButtonPressed` and `rightButtonPressed` fields. Must be called once per frame before any `IsLeft*` / `IsRight*` queries.
+
+### `bool IsLeftMousePressed()`
+
+Returns `true` while the left mouse button is held down, based on the state captured by the most recent `UpdateMouseState()` call.
+
+### `bool IsRightMousePressed()`
+
+Returns `true` while the right mouse button is held down, based on the state captured by the most recent `UpdateMouseState()` call.
+
+### `bool IsLeftMouseClicked()`
+
+Returns `true` on the frame the left button transitions from unpressed to pressed. Useful for single-fire actions such as selecting a menu item or firing a projectile.
+
+### `bool IsRightMouseClicked()`
+
+Returns `true` on the frame the right button transitions from unpressed to pressed. Mirrors `IsLeftMouseClicked()` for the right button.
+
+## Coordinate Mapping
+
+`GetMouseX()` and `GetMouseY()` use a linear mapping from screen pixel space to console cell space:
+
+```
+cellX = Map(pixelX, 0, consoleWidth,  consoleRangeStartX, consoleRangeStartX + (consoleWidth  - 1) * fontWidth)
+cellY = Map(pixelY, 0, consoleHeight, consoleRangeStartY, consoleRangeStartY + (consoleHeight - 1) * fontHeight)
+```
+
+`ConsoleHandler::GetWindowPos()` is called automatically during each coordinate query to update the window origin, so the mapping stays accurate even if the console window has been repositioned.
+
+## Example — Cursor Tracking and Click Handling
+
+```cpp
+Circle cursor(0, 0, 1, redF);
+
+while (!game.keyboardHandler.CheckForUserExit()) {
+    game.mouseHandler.UpdateMouseState();
+    game.graphics.background(whiteB);
+
+    float mx = game.mouseHandler.GetMouseX();
+    float my = game.mouseHandler.GetMouseY();
+    cursor.setCenterX(mx);
+    cursor.setCenterY(my);
+    game.graphics.draw(cursor);
+
+    if (game.mouseHandler.IsLeftMouseClicked()) {
+        // handle click at (mx, my)
+    }
+
+    game.graphics.display();
+}
+```
+
+<Note>
+  `GetWindowPos()` is called internally during mouse coordinate mapping to keep the origin accurate if the console window moves. You typically do not need to call it manually.
+</Note>

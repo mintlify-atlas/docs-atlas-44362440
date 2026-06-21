@@ -1,72 +1,93 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Fazen2d",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
-  },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "primary": "#00BFFF",
+    "light": "#E0F7FF",
+    "dark": "#003A52"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/adi3120/Fazen2d"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/adi3120/Fazen2d"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Getting Started",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Setup & Build",
+            "pages": [
+              "setup/installation",
+              "setup/build",
+              "setup/first-program"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/frame-loop",
+              "concepts/coordinate-system"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Engine Core",
+            "pages": [
+              "api/fazen",
+              "api/console-handler",
+              "api/graphics-renderer"
+            ]
+          },
+          {
+            "group": "Geometry Primitives",
+            "pages": [
+              "api/shape",
+              "api/point",
+              "api/line",
+              "api/box",
+              "api/circle",
+              "api/text"
+            ]
+          },
+          {
+            "group": "Input & Timing",
+            "pages": [
+              "api/keyboard-handler",
+              "api/mouse-handler",
+              "api/time-manager"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "api/colors",
+              "api/state-manager",
+              "api/math-utils"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

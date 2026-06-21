@@ -1,0 +1,173 @@
+---
+title: "Building Fazen2d with Make or g++ on Windows"
+sidebarTitle: "Build"
+description: "Compile Fazen2d using the provided Makefile or a manual g++ command. Includes build options, output artifacts, and common troubleshooting steps."
+---
+
+Fazen2d ships with a Makefile that compiles all `.cpp` files under `include/` plus `main.cpp` into a single executable named `a`. The build system relies on `g++` with the C++11 standard flag and GNU Make; no CMake, Ninja, or other meta-build tool is needed.
+
+## Using the Makefile
+
+<Steps>
+  <Step title="Open a terminal in the project root">
+    Open `cmd.exe`, PowerShell, or Git Bash and `cd` into the cloned `Fazen2d/` directory — the folder that contains `Makefile` and `main.cpp`.
+
+    ```cmd
+    cd path\to\Fazen2d
+    ```
+  </Step>
+
+  <Step title="Run make">
+    Invoke the default `all` target:
+
+    ```bash
+    make
+    ```
+
+    Make discovers every `*.cpp` under `include/` (geometry primitives, renderer, input handlers, console management, and utilities) plus `main.cpp`, compiles each into a corresponding `.o` object file inside `include/`, and links everything into the executable `a` (or `a.exe` on Windows).
+  </Step>
+
+  <Step title="Run the executable">
+    Launch the compiled demo directly from the project root:
+
+    ```cmd
+    .\a
+    ```
+
+    A white console buffer fills the window and an animated red box, blue line, and green circle appear. Press **ESC** to exit.
+  </Step>
+
+  <Step title="Clean build artifacts">
+    To remove the compiled `.o` object files from `include/`:
+
+    ```bash
+    make clean
+    ```
+
+    This runs `del /Q include\*.o`, which is equivalent to deleting every intermediate object file. The executable `a` is **not** removed by the clean target.
+  </Step>
+</Steps>
+
+## Makefile Internals
+
+Below is the complete Makefile as it exists in the repository:
+
+```make
+# Compiler and compiler flags
+CC = g++
+CFLAGS = -std=c++11
+
+# Directories
+SRC_DIR = include
+OBJ_DIR = include
+
+# Source files and object files
+SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp) main.cpp
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+
+# Executable name
+TARGET = a
+
+# Targets
+all: $(TARGET)
+
+$(TARGET): $(OBJ_FILES)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	del /Q $(OBJ_DIR)\*.o
+```
+
+| Variable    | Value                          | Purpose                                                                   |
+|-------------|--------------------------------|---------------------------------------------------------------------------|
+| `CC`        | `g++`                          | The compiler binary invoked for every compile and link step               |
+| `CFLAGS`    | `-std=c++11`                   | Enables the C++11 standard required by Fazen2d's type-safe APIs           |
+| `SRC_DIR`   | `include`                      | The directory scanned for `*.cpp` implementation files                    |
+| `OBJ_DIR`   | `include`                      | Where object files are written (same directory as the sources)            |
+| `SRC_FILES` | `include/*.cpp` + `main.cpp`   | The full list of translation units fed to the compiler                    |
+| `OBJ_FILES` | `include/*.o`                  | Intermediate object files, one per source file                            |
+| `TARGET`    | `a`                            | The name of the final linked executable                                   |
+
+The pattern rule `$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp` compiles each source file individually. The final link rule gathers all `.o` files and passes them to `g++` in one command.
+
+## Manual Compilation
+
+If GNU Make is not available in your environment, you can compile and link everything in a single `g++` invocation:
+
+```bash
+g++ -std=c++11 include/*.cpp main.cpp -o Fazen2d.exe
+```
+
+This command is functionally equivalent to what the Makefile produces. The shell glob `include/*.cpp` expands to every implementation file, and `main.cpp` provides the `main()` entry point. There is no separate clean step — simply delete `Fazen2d.exe` when needed.
+
+## Using run.bat
+
+The repository includes a convenience batch script, `run.bat`, that chains the build, optional cleanup, and run steps in sequence. Its full contents are:
+
+```bat
+@echo off
+
+echo Compiling and building the project...
+make
+
+if %errorlevel% neq 0 (
+    echo Error: Compilation failed.
+    pause
+    exit /b %errorlevel%
+)
+
+echo Cleaning up...
+make clean
+
+if %errorlevel% neq 0 (
+    echo Error: Clean-up failed.
+    pause
+    exit /b %errorlevel%
+)
+
+echo Running the program...
+echo Compiling and Linking Done!.
+```
+
+Double-click `run.bat` in File Explorer or call it from `cmd.exe` to build, clean object files, and confirm a successful link in one step. Note that in the current script the executable is not launched automatically after the cleanup — you still need to run `.\a` manually. The script is most useful as a CI-style smoke test to verify the project compiles cleanly from scratch.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="make not found">
+    GNU Make is not installed or not on your `PATH`.
+
+    - **MSYS2**: `pacman -S make` inside the MSYS2 shell, then add `C:\msys64\usr\bin` to your Windows `PATH`.
+    - **MinGW standalone**: Download `mingw32-make.exe`, rename it to `make.exe`, and add its directory to `PATH`.
+    - **Chocolatey**: `choco install make` in an elevated PowerShell prompt.
+
+    Verify with `make --version` after installation.
+  </Accordion>
+
+  <Accordion title="g++ not found">
+    The `g++` compiler binary cannot be found on your `PATH`.
+
+    Install MinGW-w64 via MSYS2 (`pacman -S mingw-w64-ucrt-x86_64-gcc`) or download a standalone MinGW distribution. Add the compiler's `bin` folder (e.g., `C:\msys64\ucrt64\bin`) to your system `PATH`, then open a fresh terminal and verify with `g++ --version`.
+  </Accordion>
+
+  <Accordion title="Spaces in the project path">
+    The Makefile uses bare path variables that are not quoted for spaces. If you have cloned the repository to a path such as `C:\My Projects\Fazen2d\`, Make may misinterpret the space as an argument separator and fail with confusing errors.
+
+    **Fix**: Clone or move the project to a path that contains no spaces, for example `C:\dev\Fazen2d`.
+  </Accordion>
+
+  <Accordion title="Permission errors on del (make clean)">
+    The `clean` target runs the Windows `del` command. In restricted environments (e.g., a networked drive, a folder with inherited read-only ACLs, or a corporate-managed machine) this can fail with an "Access is denied" error.
+
+    **Fix**: Run your terminal as Administrator, or manually delete `include\*.o` from File Explorer.
+  </Accordion>
+
+  <Accordion title="windows.h not found">
+    Fazen2d uses the Windows Console API (`WriteConsoleOutputW`, `GetAsyncKeyState`, `CHAR_INFO`, etc.) declared in `<windows.h>`. This header is provided by the Windows SDK that is bundled with MinGW/MSYS2 and Visual Studio Build Tools.
+
+    If the compiler cannot find `windows.h`, you are likely using a non-Windows GCC toolchain (e.g., a Linux `g++` package). **Fazen2d does not support Linux or macOS** — it must be compiled with a Windows-targeted GCC or MSVC toolchain.
+  </Accordion>
+</AccordionGroup>

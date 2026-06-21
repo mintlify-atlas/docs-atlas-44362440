@@ -1,0 +1,75 @@
+---
+title: "Box Class — Filled Rectangle Drawing API"
+sidebarTitle: "Box"
+description: "Box renders a solid filled rectangle on the console buffer using Point cells. Configure position, dimensions, color, and Unicode fill character."
+---
+
+`Box` draws a solid filled rectangle by iterating over the region from `(x, y)` to `(x + width, y + height)` and placing a `Point` at every position inside it. The inner loop steps in increments of `0.1` along both axes so that the rectangle is fully dense regardless of floating-point origins, delegating the actual buffer write and safe-margin check to `Point::draw()` at each step.
+
+## Header
+
+```cpp
+#include "include/headers/Box.h"
+```
+
+## Constructor
+
+```cpp
+explicit Box(float x, float y, float width, float height, short color, short character = 0x2588);
+```
+
+<ParamField path="x" type="float" required>
+  Column of the top-left corner of the rectangle.
+</ParamField>
+
+<ParamField path="y" type="float" required>
+  Row of the top-left corner of the rectangle.
+</ParamField>
+
+<ParamField path="width" type="float" required>
+  Horizontal extent in console columns. The filled region spans columns `x` through `x + width` inclusive.
+</ParamField>
+
+<ParamField path="height" type="float" required>
+  Vertical extent in console rows. The filled region spans rows `y` through `y + height` inclusive.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value applied uniformly to every cell in the rectangle (e.g. `greyF`, `blueF`).
+</ParamField>
+
+<ParamField path="character" type="short" default="0x2588">
+  Unicode code point written into every cell. Defaults to `0x2588` (█) for a solid fill. Supply a different code point for textured or patterned boxes.
+</ParamField>
+
+## Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `draw()` | `void` | Fills the `width × height` region by iterating in 0.1-unit steps and placing a `Point` at each position in the back-buffer. |
+| `translate(float dx, float dy)` | `void` | Moves the box origin by `dx`/`dy`. Applies the offset only if the entire box (origin plus dimensions) remains within console bounds. |
+| `setPosX(float)` / `getPosX()` | `void` / `float` | Top-left corner X. |
+| `setPosY(float)` / `getPosY()` | `void` / `float` | Top-left corner Y. |
+| `setWidth(float)` / `getWidth()` | `void` / `float` | Rectangle width in columns. |
+| `setHeight(float)` / `getHeight()` | `void` / `float` | Rectangle height in rows. |
+| `setColor(short)` / `getColor()` | `void` / `float` | Fill color attribute. |
+| `setCharacter(short)` / `getCharacter()` | `void` / `float` | Fill character code point. |
+
+## Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+Box wall(0.0f, 0.0f, 5.0f, 40.0f, greyF);     // 5-wide left wall
+Box floor(0.0f, 38.0f, 100.0f, 2.0f, greyF);  // 2-tall floor strip
+
+game.graphics.draw(wall);
+game.graphics.draw(floor);
+
+// Slide the wall right by one column per frame:
+wall.translate(1.0f, 0.0f);
+```
+
+<Tip>
+`Box` applies bounds checking inside `translate()` — it verifies that both the origin and the far corner `(x + width, y + height)` remain within the console before moving. However, `draw()` does **not** clip to the console boundary itself; out-of-range cells are filtered by `Point::draw()`'s safe-margin check (`x > 1` and `x < width - 1`). Always keep `x >= 0` and `x + width <= ConsoleHandler::GetConsoleWidth()` to avoid writing to invalid buffer indices.
+</Tip>

@@ -1,0 +1,108 @@
+---
+title: "GraphicsRenderer Class — Back-Buffer Rendering API"
+sidebarTitle: "GraphicsRenderer"
+description: "GraphicsRenderer manages the Fazen2d render pipeline — clear the buffer with background(), rasterize shapes with draw(), and flush with display()."
+---
+
+`GraphicsRenderer` orchestrates every frame's rendering pipeline. It reads from `ConsoleHandler`'s static buffer, dispatches draw calls to shapes, and flushes the completed frame to the visible console in a single `WriteConsoleOutputW` call. Access it through the `graphics` public member of your `Fazen` instance.
+
+## Header
+
+```cpp
+#include "include/headers/GraphicsRenderer.h"
+```
+
+This header is included automatically when you include `Fazen.h` — you do not need to add it separately in most projects.
+
+## Methods
+
+---
+
+### `background(short col)`
+
+Clears the entire back-buffer to space characters with the given Windows console color attribute. Call this at the start of every frame to erase the output from the previous frame before drawing new shapes.
+
+```cpp
+void background(short col);
+```
+
+<ParamField path="col" type="short" required>
+  A `ConsoleColor` enum value or a raw Windows console attribute short that sets
+  the background fill color. Use `whiteB` for a white background or `0` for
+  black. Color constants are defined in `include/headers/Colors.h` and are
+  available automatically through `Fazen.h`.
+</ParamField>
+
+**Implementation:**
+
+```cpp
+void GraphicsRenderer::background(short col) {
+    int total = ConsoleHandler::GetConsoleHeight() * ConsoleHandler::GetConsoleWidth();
+    for (int i = 0; i < total; i++) {
+        ConsoleHandler::GetBuffScreen()[i].Char.UnicodeChar = ' ';
+        ConsoleHandler::GetBuffScreen()[i].Attributes       = col;
+    }
+}
+```
+
+---
+
+### `draw(Shape& s)`
+
+Delegates rendering to a shape by calling `s.draw()`. The shape is responsible for writing its character(s) and color attributes into the correct cells of the `ConsoleHandler` back-buffer. Any type derived from `Shape` can be passed here.
+
+```cpp
+void draw(Shape& s);
+```
+
+<ParamField path="s" type="Shape&" required>
+  A reference to any object that derives from `Shape` — for example `Box`,
+  `Circle`, `Line`, `Point`, or `Text`. The renderer calls `s.draw()` and the
+  shape writes itself into the shared back-buffer.
+</ParamField>
+
+---
+
+### `display()`
+
+Flushes the entire back-buffer to the visible console in a single `WriteConsoleOutputW` call. Call this once at the end of every frame, after all `draw()` calls have finished.
+
+```cpp
+void display();
+```
+
+**Implementation:**
+
+```cpp
+void GraphicsRenderer::display() {
+    WriteConsoleOutputW(
+        ConsoleHandler::GetOutHandle(),
+        ConsoleHandler::GetBuffScreen(),
+        ConsoleHandler::GetBufferSize(),
+        ConsoleHandler::GetCharacterPos(),
+        ConsoleHandler::GetRectWin()
+    );
+}
+```
+
+---
+
+## Typical Frame Pattern
+
+Every game loop iteration should follow the same three-step sequence: clear, draw, flush.
+
+```cpp
+game.graphics.background(whiteB);   // 1. clear — fill every cell with spaces
+game.graphics.draw(myBox);           // 2. draw shapes into the back-buffer
+game.graphics.draw(myText);
+game.graphics.display();             // 3. flush — push the back-buffer to the console
+```
+
+## Tip
+
+<Tip>
+  Always call `background()` before drawing shapes each frame. Shapes only write
+  the cells they occupy — any cell not touched by a shape retains whatever
+  character and attribute it held in the previous frame. Skipping `background()`
+  causes visual ghosting as old frame content accumulates in the buffer.
+</Tip>

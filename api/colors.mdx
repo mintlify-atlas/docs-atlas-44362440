@@ -1,0 +1,78 @@
+---
+title: "Colors and ConsoleColor — Windows Console Styling API"
+sidebarTitle: "Colors"
+description: "Fazen2d's ConsoleColor enum and Color class map Windows console attributes to readable names. Reference for all color constants and the Color utility class."
+---
+
+Fazen2d colors are Windows console attribute `short` values that control character and cell appearance. The `ConsoleColor` enum provides named constants for common foreground and background colors built from the Windows `FOREGROUND_*` and `BACKGROUND_*` flag macros; the `Color` class combines a foreground and background constant into a single manageable object.
+
+## Header
+
+```cpp
+#include "include/headers/Colors.h"  // included automatically via Fazen.h
+```
+
+## `ConsoleColor` Enum
+
+All constants are defined as members of the `ConsoleColor` enum and can be used wherever a `short` color value is expected.
+
+| Constant | Value | Meaning |
+|----------|-------|---------|
+| `redF` | `FOREGROUND_RED \| FOREGROUND_INTENSITY` | Bright red foreground |
+| `redB` | `BACKGROUND_RED \| BACKGROUND_INTENSITY` | Bright red background |
+| `blueF` | `FOREGROUND_BLUE \| FOREGROUND_INTENSITY` | Bright blue foreground |
+| `blueB` | `BACKGROUND_BLUE \| BACKGROUND_INTENSITY` | Bright blue background |
+| `greenF` | `FOREGROUND_GREEN \| FOREGROUND_INTENSITY` | Bright green foreground |
+| `greenB` | `BACKGROUND_GREEN \| BACKGROUND_INTENSITY` | Bright green background |
+| `dmagentaF` | `0x0005` | Dark magenta foreground |
+| `magentaF` | `0x000D` | Bright magenta foreground |
+| `yellowF` | `0x000E` | Yellow foreground |
+| `dyellowF` | `0x0006` | Dark yellow foreground |
+| `dredF` | `0x0004` | Dark red foreground |
+| `greyF` | `0x0008` | Grey foreground |
+| `dgreenF` | `0x0002` | Dark green foreground |
+| `whiteF` | `0x000F` | White foreground |
+| `whiteB` | `BACKGROUND_BLUE \| BACKGROUND_RED \| BACKGROUND_GREEN \| BACKGROUND_INTENSITY` | White background |
+
+## `Color` Class
+
+The `Color` class stores a foreground color, a background color, and a combined `value` computed as `fgColor | bgColor`. The constructor initializes all three fields.
+
+### Constructor
+
+```cpp
+Color(short fgColor = 0, short bgColor = whiteB);
+```
+
+Creates a `Color` with the given foreground and background. The combined `value` is set to `fgColor | bgColor` at construction time. If no arguments are passed, the foreground defaults to `0` (no foreground attribute) and the background defaults to `whiteB`.
+
+### Methods
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `setFgColor(short fgColor)` | `void` | Sets the stored foreground color field |
+| `getFgColor()` | `short` | Returns the stored foreground color |
+| `setBgColor(short bgColor)` | `void` | Sets the stored background color field |
+| `getBgColor()` | `short` | Returns the stored background color |
+| `setValue(short value)` | `void` | Overrides the combined attribute directly |
+| `getValue()` | `short` | Returns the combined attribute (`fgColor \| bgColor` or the overridden value) |
+
+Pass `getValue()` to any shape's color parameter to apply the full foreground-and-background styling.
+
+## Combining Colors
+
+Foreground and background constants can be combined with the bitwise OR operator, either directly or through the `Color` class.
+
+```cpp
+// Red text on blue background — direct bitwise OR
+short combined = redF | blueB;
+Text label(5, 5, L"Alert!", combined);
+
+// Equivalent approach using the Color class
+Color c(redF, blueB);
+Text label2(5, 7, L"Alert!", c.getValue());
+```
+
+<Note>
+  Constants suffixed `F` set the character (foreground) color; constants suffixed `B` set the cell background color. Pass background constants to `game.graphics.background()` and foreground constants (or combined values) as the `color` parameter of shapes such as `Box`, `Circle`, `Text`, and `Point`.
+</Note>

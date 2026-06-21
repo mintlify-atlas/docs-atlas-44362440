@@ -1,0 +1,101 @@
+---
+title: "Fazen2d Console Coordinate System and StateManager"
+sidebarTitle: "Coordinates"
+description: "Understand Fazen2d's console cell coordinate system, how shapes are positioned, and how StateManager translates coordinates globally."
+---
+
+All Fazen2d coordinates are expressed in console cell units. The origin `(0, 0)` sits at the top-left corner of the console buffer. The X axis runs horizontally to the right; the Y axis runs vertically downward. There are no pixels — every unit represents one `CHAR_INFO` cell in the buffer.
+
+## Cell Grid
+
+The total grid size is set once at engine construction via `Fazen(int s_width, int s_height)`. For example, `Fazen game(100, 100)` creates a 100-column by 100-row grid. Valid cell addresses are `0` through `s_width - 1` horizontally and `0` through `s_height - 1` vertically. Anything outside those bounds is silently ignored by the shape `draw()` implementations — `Point::draw()` and `Point::translate()` both guard against out-of-range writes.
+
+Console cells are not square pixels. Their visual aspect ratio depends on the font configured by `ConsoleHandler::make2DConsole()`, which defaults to an 8×8-pixel font. At that font size, one cell is as wide as it is tall, but many system fonts make cells taller than they are wide. Design layouts with this in mind: a circle drawn with `radius = 10` may appear elliptical unless the font is square.
+
+## Shape Positioning
+
+Every shape accepts its position as constructor arguments measured in cell units. All position and size values are `float`.
+
+| Shape | Coordinate Parameters | Meaning |
+|---|---|---|
+| `Point` | `(x, y)` | Column and row of the single cell to draw |
+| `Line` | `(x1, y1, x2, y2)` | Start cell and end cell; Bresenham's algorithm fills the path between them |
+| `Box` | `(x, y, width, height)` | Top-left cell of the rectangle plus its size in cells |
+| `Circle` | `(xc, yc, radius)` | Center cell and radius in cells; fill uses the distance formula |
+| `Text` | `(x, y)` | Cell of the first character; subsequent characters advance `x` by 1 per wide char |
+
+Example instantiations from `main.cpp`:
+
+```cpp
+Box    b(0,  20, 20, 60, redF);    // top-left (0,20), 20 wide, 60 tall
+Line   l(0,   0, 10, 10, blueF);   // from (0,0) to (10,10)
+Circle c(20, 20, 10, greenF);      // center (20,20), radius 10
+```
+
+## Float Coordinates
+
+<Note>
+All shape positions are stored as `float`. When `draw()` indexes into the `CHAR_INFO` buffer it truncates to `int` with a cast: `int(x) + ConsoleHandler::GetConsoleWidth() * int(y)`. This means you can call `translate(0.3f, 0.0f)` on a shape and it will not visually move until enough sub-cell increments accumulate to cross a whole-number boundary. The fractional part is retained in the `float` field, so movement is smooth and continuous even at velocities less than one cell per frame.
+</Note>
+
+## StateManager
+
+`StateManager` provides a global coordinate offset — called the *center* — that is added to every shape's coordinates at draw time via `translateCoordinates()`. This lets you shift the apparent origin for a group of objects without modifying each shape individually.
+
+### API
+
+| Method | Signature | Description |
+|---|---|---|
+| `setCenter` | `static void setCenter(float x, float y)` | Set the global offset applied to all subsequent `translateCoordinates` calls |
+| `getCenterX` / `getCenterY` | `static float getCenterX()` / `getCenterY()` | Retrieve the current center values |
+| `translateCoordinates` | `static void translateCoordinates(float& x, float& y)` | Add the current center offset to the given `x` and `y` references |
+| `saveState` | `static void saveState()` | Snapshot the current center into temporary storage |
+| `restoreState` | `static void restoreState()` | Restore the center from the most recent snapshot |
+
+### How translateCoordinates Works
+
+The implementation adds the stored center directly to the coordinate references:
+
+```cpp
+void StateManager::translateCoordinates(float& x, float& y) {
+    x += getCenterX();
+    y += getCenterY();
+}
+```
+
+Shape `draw()` methods that support the global offset call this before computing the buffer index, so a center of `(50, 25)` shifts every shape's logical `(0, 0)` to physical cell `(50, 25)`.
+
+### Usage Example
+
+```cpp
+StateManager::setCenter(50.0f, 25.0f);   // Move origin to center of a 100x50 console
+Point p(0.0f, 0.0f, greenF);             // Logical (0,0) → draws at physical cell (50, 25)
+p.draw();
+StateManager::setCenter(0.0f, 0.0f);     // Reset to top-left
+```
+
+### Save and Restore
+
+`saveState()` and `restoreState()` are useful when you want to temporarily shift the coordinate frame for a group of related objects and then return to the previous origin:
+
+```cpp
+StateManager::saveState();               // Remember current center
+StateManager::setCenter(30.0f, 10.0f);  // New local origin for this group
+
+Box   panel(0.0f, 0.0f, 20.0f, 8.0f, whiteB);
+Text  label(1.0f, 1.0f, L"Score: 0", greenF);
+panel.draw();
+label.draw();
+
+StateManager::restoreState();            // Back to the saved center
+```
+
+## Mouse Coordinates
+
+`MouseHandler::GetMouseX()` and `GetMouseY()` return coordinates in the same console cell space. Internally they call `GetCursorPos()` to read the raw screen pixel position, subtract the console window's top-left pixel offset (obtained via `ConsoleHandler::GetWindowPos()`), and then apply `MathUtils::Map()` using `ConsoleHandler::GetFontWidth()` and `GetFontHeight()` to convert from pixels to cells. The result is that a click in column 5, row 3 of the visible console returns approximately `GetMouseX() ≈ 5.0f` and `GetMouseY() ≈ 3.0f`, aligning mouse input with the same grid your shapes occupy.
+
+## Tips
+
+<Tip>
+Use float velocities smaller than `1.0f` — such as `translate(0.3f, 0.05f)` — for smooth sub-cell animation. Because positions are stored as `float` and only truncated to `int` when writing to the buffer, tiny increments accumulate precisely without any snapping or teleporting. This is especially useful for slow scrolling backgrounds, drifting particles, or easing-in/easing-out effects.
+</Tip>

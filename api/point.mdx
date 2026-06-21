@@ -1,0 +1,66 @@
+---
+title: "Point Class — Single Console Cell Drawing API"
+sidebarTitle: "Point"
+description: "Point draws a single character cell at (x, y) with a given color. Supports custom Unicode characters and smooth sub-cell translation."
+---
+
+`Point` is the fundamental rendering primitive in Fazen2d. It draws exactly one character cell at position `(x, y)` in the `ConsoleHandler` back-buffer using a caller-supplied `ConsoleColor` and Unicode character code. All other shapes — `Line`, `Box`, and `Circle` — are built internally from individual `Point` draws, making it the foundation of the entire graphics system.
+
+## Header
+
+```cpp
+#include "include/headers/Point.h"
+```
+
+## Constructor
+
+```cpp
+explicit Point(float x, float y, short color, short character = 0x2588);
+```
+
+<ParamField path="x" type="float" required>
+  Horizontal position in console columns. Truncated to `int` on each `draw()` call. Valid range: `1 < x < ConsoleHandler::GetConsoleWidth() - 1`.
+</ParamField>
+
+<ParamField path="y" type="float" required>
+  Vertical position in console rows. Truncated to `int` on each `draw()` call. Valid range: `1 < y < ConsoleHandler::GetConsoleHeight() - 1`.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value (e.g. `greenF`, `redF`, `whiteF`) that sets the Windows console foreground attribute for the cell.
+</ParamField>
+
+<ParamField path="character" type="short" default="0x2588">
+  Unicode code point written into the cell's `Char.UnicodeChar` field. The default `0x2588` (█) produces a solid filled block. Pass any valid `wchar_t`-range code point for custom characters (e.g. `0x2605` for ★).
+</ParamField>
+
+## Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `draw()` | `void` | Writes `character` and `color` into the back-buffer cell at `(int(x), int(y))`. Silently skips the draw if `x` or `y` falls outside the safe margin (`> 1` and `< dimension - 1`). |
+| `translate(float dx, float dy)` | `void` | Computes `nx = x + dx`, `ny = y + dy` and applies the offset only if the new position is fully within `[0, consoleWidth)` × `[0, consoleHeight)`. No-ops on out-of-bounds moves. |
+| `setPosX(float x)` | `void` | Sets the X position directly, bypassing bounds checking. |
+| `getPosX()` | `float` | Returns the current X position. |
+| `setPosY(float y)` | `void` | Sets the Y position directly, bypassing bounds checking. |
+| `getPosY()` | `float` | Returns the current Y position. |
+| `setColor(short color)` | `void` | Replaces the color attribute used on the next `draw()` call. |
+| `getColor()` | `float` | Returns the current color attribute as a `float`. |
+| `setCharacter(short character)` | `void` | Replaces the Unicode character written on the next `draw()` call. |
+| `getCharacter()` | `float` | Returns the current character code as a `float`. |
+
+## Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+Point dot(10.0f, 5.0f, greenF);            // green filled square (█) at (10, 5)
+Point star(20.0f, 10.0f, yellowF, 0x2605); // yellow ★ at (20, 10)
+
+// Inside the game loop:
+game.graphics.draw(dot);
+game.graphics.draw(star);
+
+// Move dot one cell to the right each frame:
+dot.translate(1.0f, 0.0f);
+```

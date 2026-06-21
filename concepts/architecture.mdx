@@ -1,0 +1,113 @@
+---
+title: "Fazen2d Engine Architecture and Module Overview"
+sidebarTitle: "Architecture"
+description: "Explore how Fazen2d's subsystems fit together — ConsoleHandler, GraphicsRenderer, input, timing, geometry, and the Fazen aggregator class."
+---
+
+Fazen2d is organized into six subsystems wired together by a single aggregator class, `Fazen`. Including `Fazen.h` is all user code needs — it acts as an umbrella header that pulls in every subsystem's declaration, so you get console management, rendering, geometry primitives, input, and utilities from one `#include "include/headers/Fazen.h"` line.
+
+## Subsystem Map
+
+| Subsystem | Classes | Responsibility |
+|---|---|---|
+| Core | `Fazen` | Aggregates all subsystems into one engine object |
+| Console Management | `ConsoleHandler`, `Colors` | Buffer allocation, handle setup, font configuration, and color constants |
+| Rendering | `GraphicsRenderer` | Buffer clearing, draw dispatch, and atomic flush to the console |
+| Geometry | `Shape`, `Point`, `Line`, `Box`, `Circle`, `Text` | Drawable primitives; each implements `draw()` and `translate()` |
+| Input | `KeyboardHandler`, `MouseHandler` | Key state queries and mouse position tracking |
+| Utilities | `StateManager`, `TimeManager`, `MathUtils` | Global coordinate offset, frame timing, and numeric mapping |
+
+## Class Dependency Flow
+
+`Fazen` is the root of the dependency graph. Its constructor instantiates `ConsoleHandler` first, allocating the `CHAR_INFO` back-buffer and configuring the Windows console. `GraphicsRenderer` comes next and depends on `ConsoleHandler`'s static methods to read the buffer pointer, buffer dimensions, and output handle. `KeyboardHandler`, `MouseHandler`, and `TimeManager` are then initialized; `MouseHandler` depends on both `ConsoleHandler` (for font dimensions and window position) and `MathUtils` (for coordinate mapping). Shape subclasses — `Point`, `Line`, `Box`, `Circle`, and `Text` — depend on `ConsoleHandler` at draw time, calling `ConsoleHandler::GetBuffScreen()` and `ConsoleHandler::GetConsoleWidth()` to index and write into the buffer. `StateManager` holds purely static state and has no constructor dependency on any other class.
+
+## The Fazen Aggregator
+
+`Fazen` declares all five public subsystem members. Constructing it with a width and height is the only initialization call your application needs:
+
+```cpp
+class Fazen {
+public:
+    ConsoleHandler   console;
+    GraphicsRenderer graphics;
+    KeyboardHandler  keyboardHandler;
+    TimeManager      timer;
+    MouseHandler     mouseHandler;
+
+    Fazen(int s_width, int s_height);
+};
+```
+
+| Member | Type | Purpose |
+|---|---|---|
+| `console` | `ConsoleHandler` | Owns the `CHAR_INFO` buffer and all Windows console handles |
+| `graphics` | `GraphicsRenderer` | Exposes `background()`, `draw()`, and `display()` |
+| `keyboardHandler` | `KeyboardHandler` | Wraps `GetAsyncKeyState`; provides `IsKeyPressed()` and `CheckForUserExit()` |
+| `timer` | `TimeManager` | Measures elapsed time between frames via `std::chrono` |
+| `mouseHandler` | `MouseHandler` | Maps raw cursor pixel positions to console cell coordinates |
+
+The full umbrella header `Fazen.h` also forward-includes all geometry and color headers, so shapes like `Box` and color constants like `redF` are available everywhere `Fazen.h` is included:
+
+```cpp
+#include "StateManager.h"
+#include "ConsoleHandler.h"
+#include "MathUtils.h"
+#include "Colors.h"
+#include "MouseHandler.h"
+#include "KeyboardHandler.h"
+#include "GraphicsRenderer.h"
+#include "TimeManager.h"
+
+#include "Circle.h"
+#include "Point.h"
+#include "Line.h"
+#include "Text.h"
+#include "Box.h"
+```
+
+## File Layout
+
+```
+.
+├── include/
+│   ├── headers/          # Public API headers
+│   │   ├── Fazen.h
+│   │   ├── Shape.h
+│   │   ├── Point.h  Line.h  Box.h  Circle.h  Text.h
+│   │   ├── Colors.h
+│   │   ├── GraphicsRenderer.h
+│   │   ├── ConsoleHandler.h
+│   │   ├── KeyboardHandler.h  MouseHandler.h
+│   │   ├── StateManager.h  TimeManager.h  MathUtils.h
+│   ├── *.cpp             # Implementation units
+├── main.cpp              # Demo entry point
+└── Makefile
+```
+
+Each header under `include/headers/` is paired with a same-name `.cpp` under `include/`. For example, `GraphicsRenderer.h` is implemented by `include/GraphicsRenderer.cpp`, which opens with `#include "headers/GraphicsRenderer.h"`. The Makefile uses a wildcard pattern rule to compile every `.cpp` in `include/` automatically:
+
+```make
+SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp) main.cpp
+```
+
+## Extension Points
+
+Adding a new drawable primitive to Fazen2d requires four steps:
+
+1. **Create the header** — add `include/headers/YourShape.h`. Derive your class from `Shape` and declare the constructor, `void draw() override`, and `void translate(float dx, float dy) override`.
+2. **Implement the class** — add `include/YourShape.cpp`. Inside `draw()`, call `ConsoleHandler::GetBuffScreen()` to obtain the buffer pointer and write characters using the `x + ConsoleHandler::GetConsoleWidth() * y` index formula.
+3. **Include it where needed** — add `#include "YourShape.h"` to `Fazen.h` (or directly in your application file) so the new type is visible.
+4. **Build** — run `make`. The Makefile wildcard picks up `include/YourShape.cpp` automatically; no Makefile edits are required.
+
+The `Shape` base interface enforces the contract:
+
+```cpp
+class Shape {
+public:
+    virtual void draw() = 0;
+    virtual void translate(float dx, float dy) = 0;
+    virtual ~Shape() = default;
+};
+```
+
+Because `GraphicsRenderer::draw(Shape& s)` accepts any `Shape` reference, your new primitive integrates into the existing frame loop without any changes to the renderer.

@@ -1,0 +1,70 @@
+---
+title: "KeyboardHandler Class — Keyboard Input API"
+sidebarTitle: "KeyboardHandler"
+description: "KeyboardHandler wraps Windows GetAsyncKeyState to poll key press and release states. Use IsKeyPressed, IsKeyReleased, and CheckForUserExit in your loop."
+---
+
+`KeyboardHandler` wraps `GetAsyncKeyState` to let you poll keyboard state each frame without blocking. Rather than waiting on input events, it samples key state asynchronously on every call, making it well-suited for real-time game loops. Access it via `game.keyboardHandler`.
+
+## Header
+
+```cpp
+#include "include/headers/KeyboardHandler.h"  // included automatically via Fazen.h
+```
+
+## Methods
+
+| Signature | Returns | Description |
+|-----------|---------|-------------|
+| `IsKeyPressed(int keyCode)` | `bool` | `true` while the key is currently held down |
+| `IsKeyReleased(int keyCode)` | `bool` | `true` when the key is not held down |
+| `CheckForUserExit()` | `bool` | `true` when the Escape key is pressed |
+
+### `bool IsKeyPressed(int keyCode)`
+
+Returns `true` while the specified key is currently held down. Internally calls `GetAsyncKeyState(keyCode) & 0x8000` to test the high-order bit, which is set when the key is pressed at the moment of the call.
+
+### `bool IsKeyReleased(int keyCode)`
+
+Returns `true` when the specified key is **not** held down. This is the logical inverse of `IsKeyPressed` — it returns `true` when `GetAsyncKeyState(keyCode) & 0x8000` is zero.
+
+### `bool CheckForUserExit()`
+
+Returns `true` when the Escape key (`VK_ESCAPE`) is pressed. This is a convenience wrapper equivalent to calling `IsKeyPressed(VK_ESCAPE)`, intended for use as the condition of your main game loop.
+
+## Key Code Reference
+
+| Virtual Key Constant | Hex Value | Common Use |
+|----------------------|-----------|------------|
+| `VK_ESCAPE` | `0x1B` | Exit / quit |
+| `VK_LEFT` | `0x25` | Left arrow |
+| `VK_RIGHT` | `0x27` | Right arrow |
+| `VK_UP` | `0x26` | Up arrow |
+| `VK_DOWN` | `0x28` | Down arrow |
+| `VK_SPACE` | `0x20` | Space bar |
+| `'A'`–`'Z'` | `0x41`–`0x5A` | Letter keys (uppercase ASCII) |
+| `VK_RETURN` | `0x0D` | Enter |
+
+All standard Windows Virtual Key codes defined in `<windows.h>` are valid. For a complete reference see the [Microsoft Virtual-Key Codes documentation](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
+
+## Example — Movement Using Arrow Keys
+
+```cpp
+Box player(40.0f, 20.0f, 3.0f, 3.0f, greenF);
+
+while (!game.keyboardHandler.CheckForUserExit()) {
+    game.graphics.background(whiteB);
+
+    if (game.keyboardHandler.IsKeyPressed(VK_LEFT))  player.translate(-0.5f, 0.0f);
+    if (game.keyboardHandler.IsKeyPressed(VK_RIGHT)) player.translate( 0.5f, 0.0f);
+    if (game.keyboardHandler.IsKeyPressed(VK_UP))    player.translate( 0.0f,-0.5f);
+    if (game.keyboardHandler.IsKeyPressed(VK_DOWN))  player.translate( 0.0f, 0.5f);
+
+    game.graphics.draw(player);
+    game.graphics.display();
+}
+```
+
+<Tip>
+  `GetAsyncKeyState` reports asynchronous key state — it works even when the console does not have focus. This is useful during testing but may cause unexpected input if you switch windows while your game loop is running.
+</Tip>

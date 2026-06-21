@@ -1,0 +1,62 @@
+---
+title: "Fazen2d: Lightweight Console Graphics Library for C++"
+sidebarTitle: "Introduction"
+description: "Fazen2d is a C++ library for ASCII and Unicode Windows console graphics. Learn what it does, its architecture, and when to use it."
+---
+
+Fazen2d is a lightweight C++ library that brings structured 2D graphics to the Windows console, solving the challenge of building interactive ASCII and Unicode visualizations without reaching for heavyweight GUI frameworks. This page covers what Fazen2d provides, how its subsystems fit together, when it's the right tool for a project, and the constraints you should be aware of before adopting it.
+
+## What Fazen2d Provides
+
+<CardGroup cols={2}>
+  <Card title="Rendering" icon="display">
+    A double-buffered rendering pipeline built on the Win32 `WriteConsoleOutputW` API. `GraphicsRenderer` clears the off-screen `CHAR_INFO` buffer each frame, accepts draw calls for any shape, and flushes the completed buffer to the visible console in one atomic operation — eliminating flicker and partial updates.
+  </Card>
+  <Card title="Geometry Primitives" icon="shapes">
+    A polymorphic shape hierarchy rooted at the abstract `Shape` class. Concrete types — `Point`, `Line` (Bresenham), `Box` (filled rectangle), `Circle` (distance-formula fill), and `Text` (wide-character strings) — each implement `draw()` and `translate(dx, dy)` for straightforward animation.
+  </Card>
+  <Card title="Input Handling" icon="keyboard">
+    `KeyboardHandler` wraps `GetAsyncKeyState` to expose `IsKeyPressed`, `IsKeyReleased`, and a convenience `CheckForUserExit` that watches `VK_ESCAPE`. `MouseHandler` maps raw screen pixel coordinates to console-cell coordinates and tracks left/right button click states frame-by-frame.
+  </Card>
+  <Card title="Timing & State" icon="clock">
+    `TimeManager` measures frame-to-frame elapsed time in seconds, letting you write frame-rate-independent motion. `StateManager` maintains a global center offset used to translate console coordinates, with `saveState` / `restoreState` for nested coordinate transformations. `MathUtils` supplies a linear `Map` function and the constant `pi`.
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+The `Fazen` class is the single entry point for user code. Its constructor initialises `ConsoleHandler`, which allocates the console buffer and configures the font and window size. All other subsystems — `GraphicsRenderer`, `KeyboardHandler`, `MouseHandler`, and `TimeManager` — are public members of `Fazen` and ready to use immediately after construction. `GraphicsRenderer` holds a reference to `ConsoleHandler`'s back-buffer and dispatches draw calls down to individual `Shape` implementations. `StateManager` and `MathUtils` operate as stateless (or static) utilities available to all modules.
+
+| Class | File | Responsibility |
+|---|---|---|
+| `Fazen` | `include/headers/Fazen.h` | Aggregates all subsystems into one engine object |
+| `ConsoleHandler` | `include/headers/ConsoleHandler.h` | Allocates and configures the `CHAR_INFO` back-buffer; exposes Win32 handles and dimensions |
+| `GraphicsRenderer` | `include/headers/GraphicsRenderer.h` | Clears the back-buffer, dispatches `Shape::draw()`, and flushes via `WriteConsoleOutputW` |
+| `KeyboardHandler` | `include/headers/KeyboardHandler.h` | Wraps `GetAsyncKeyState` for key-pressed, key-released, and exit queries |
+| `MouseHandler` | `include/headers/MouseHandler.h` | Maps screen pixels to console cells; tracks left/right button states per frame |
+| `TimeManager` | `include/headers/TimeManager.h` | Measures elapsed time between frames for frame-rate-independent updates |
+| `StateManager` | `include/headers/StateManager.h` | Manages a global coordinate center offset with save/restore capability |
+| `MathUtils` | `include/headers/MathUtils.h` | Provides a linear `Map` utility and the constant `pi` |
+| `Shape` | `include/headers/Shape.h` | Abstract base class enforcing `draw()` and `translate(dx, dy)` on all primitives |
+| `Point` | `include/headers/Point.h` | Renders a single console cell with a chosen character and color |
+| `Line` | `include/headers/Line.h` | Draws a line between two points using Bresenham's algorithm |
+| `Box` | `include/headers/Box.h` | Renders a filled rectangle by composing `Point` instances |
+| `Circle` | `include/headers/Circle.h` | Renders a filled circle using the distance formula per cell |
+| `Text` | `include/headers/Text.h` | Writes a `wstring` to the buffer, supporting full Unicode console output |
+| `Colors` / `Color` | `include/headers/Colors.h` | Defines `ConsoleColor` enum constants (e.g. `redF`, `whiteB`) and a composable `Color` class |
+
+## When to Use Fazen2d
+
+Fazen2d is a strong fit when your goals align with console-based, Windows-native output and you want to avoid external dependencies:
+
+- **Simple 2D console games** — turn-based or real-time games where the console grid is the game board; Fazen2d's frame loop and input handling give you everything needed to build a playable prototype.
+- **ASCII art tools and generators** — interactively composing or animating ASCII/Unicode art using geometric primitives, text overlays, and color attributes.
+- **Terminal visualizers on Windows** — data visualizations, progress indicators, or debug overlays rendered directly in the console without spawning a GUI window.
+- **Learning projects** — understanding double-buffering, Bresenham's line algorithm, and Win32 console APIs through a readable, well-scoped C++ codebase.
+- **Lightweight demos and prototypes** — situations where you want a visible graphical result with minimal setup, no CMake, no third-party SDKs, and a single `make` command to build.
+
+## Limitations
+
+<Note>
+  Fazen2d is **Windows-only**. It relies on `<windows.h>` and Win32 Console APIs (`WriteConsoleOutputW`, `GetAsyncKeyState`, `GetCursorPos`, `CHAR_INFO`, and related types) that have no equivalent on macOS or Linux. It is also strictly a **console-mode** library — it writes to a Windows console buffer and cannot render to a native GUI window, a web view, or any cross-platform terminal emulator. Porting to non-Windows platforms would require replacing all Win32 API calls with platform-appropriate alternatives.
+</Note>

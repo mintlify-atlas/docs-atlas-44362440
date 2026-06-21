@@ -1,0 +1,97 @@
+---
+title: "Text Class — Unicode String Rendering API"
+sidebarTitle: "Text"
+description: "Text renders a wide-character string at a given console position. Supports wstring and integer value overloads, color, and position setters."
+---
+
+`Text` writes a `std::wstring` into consecutive console cells starting at `(x, y)`, setting each cell's `Char.UnicodeChar` and `Attributes` fields directly in the `ConsoleHandler` back-buffer. Unlike the geometry primitives, `Text` does not go through `Point::draw()` — it writes to the buffer directly in a tight loop, so there is no built-in bounds check. It provides two construction paths: a wide-string literal overload and an integer overload that converts the number to a `wstring` via `std::wostringstream`, making it convenient for live score or counter displays.
+
+## Header
+
+```cpp
+#include "include/headers/Text.h"
+```
+
+`Text.h` pulls in `<sstream>` and `<string>` and brings `std::wstring` into scope.
+
+## Constructors
+
+### From a wide string
+
+```cpp
+Text(float x, float y, wstring s, short color);
+```
+
+<ParamField path="x" type="float" required>
+  Starting column for the first character of the string.
+</ParamField>
+
+<ParamField path="y" type="float" required>
+  Row at which the string is rendered. All characters share the same row.
+</ParamField>
+
+<ParamField path="s" type="wstring" required>
+  The wide-character string to display. Use `L"..."` wide string literals. Supports any Unicode code points representable as `wchar_t`.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value applied to every character in the string (e.g. `whiteF`, `yellowF`).
+</ParamField>
+
+### From an integer
+
+```cpp
+Text(float x, float y, int b, short color);
+```
+
+<ParamField path="x" type="float" required>
+  Starting column for the rendered number string.
+</ParamField>
+
+<ParamField path="y" type="float" required>
+  Row at which the number is rendered.
+</ParamField>
+
+<ParamField path="b" type="int" required>
+  Integer value converted to a `wstring` via `std::wostringstream` and stored as the internal string. Use `setValue(int)` to update it each frame.
+</ParamField>
+
+<ParamField path="color" type="short" required>
+  A `ConsoleColor` enum value applied to every digit character.
+</ParamField>
+
+## Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `draw()` | `void` | Iterates over the internal `wstring`, writing each `wchar_t` and the color attribute into consecutive back-buffer cells at row `y` starting from column `x`. |
+| `translate(float dx, float dy)` | `void` | Adds `dx` to X and `dy` to Y. No bounds checking is performed — the caller must keep the string within console bounds. |
+| `setValue(wstring s)` | `void` | Replaces the displayed string with a new wide-string value. |
+| `setValue(int b)` | `void` | Converts `b` to a `wstring` via `std::wostringstream` and replaces the displayed string. Useful for live integer counters. |
+| `setPosX(float)` / `getPosX()` | `void` / `float` | Starting column of the text. |
+| `setPosY(float)` / `getPosY()` | `void` / `float` | Row of the text. |
+| `setColor(short)` / `getColor()` | `void` / `short` | Color attribute applied to every character. |
+| `getValue()` | `wstring` | Returns the current `wstring` value stored in the object. |
+
+## Example
+
+```cpp
+#include "include/headers/Fazen.h"
+
+Text title(2.0f, 1.0f, L"Fazen2d Demo", whiteF);
+Text score(2.0f, 3.0f, 0, yellowF);   // displays "0" initially
+
+// Inside the game loop:
+score.setValue(currentScore);          // update integer display each frame
+
+game.graphics.draw(title);
+game.graphics.draw(score);
+```
+
+<Tip>
+Use wide string literals (`L"..."`) for all `Text` values. You can embed Unicode code points directly in the literal: `L"\u2665 Health: 100"` renders as `♥ Health: 100`. Any `wchar_t`-representable character is valid — block elements, box-drawing characters, and emoji all work as long as the console font supports them.
+</Tip>
+
+<Note>
+`Text::draw()` writes directly to the back-buffer without a bounds check. If `x + value.length()` exceeds `ConsoleHandler::GetConsoleWidth()`, the write wraps into the next row or beyond the buffer end, causing visual corruption or a buffer overrun. Always verify that `(int)x + (int)value.size() <= ConsoleHandler::GetConsoleWidth()` before drawing near the right edge.
+</Note>
