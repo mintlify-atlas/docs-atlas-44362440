@@ -32,6 +32,24 @@ Allocates the `CHAR_INFO*` back-buffer of size `s_width * s_height`, acquires th
   `console_height` and used to compute the total buffer element count.
 </ParamField>
 
+## `make2DConsole(int fontw, int fonth)`
+
+Configures the console font size, resizes the console window to match the buffer rectangle, and enables mouse and window input on the input handle. Called automatically by the constructor with `fontw = 8` and `fonth = 8`; call it again only if you need a different cell size after construction.
+
+```cpp
+void make2DConsole(int fontw, int fonth);
+```
+
+<ParamField path="fontw" type="int" required>
+  Pixel width of each character cell. Passed to `CONSOLE_FONT_INFOEX::dwFontSize.X`.
+  Defaults to `8` when called from the constructor.
+</ParamField>
+
+<ParamField path="fonth" type="int" required>
+  Pixel height of each character cell. Passed to `CONSOLE_FONT_INFOEX::dwFontSize.Y`.
+  Defaults to `8` when called from the constructor.
+</ParamField>
+
 ## Static Methods — Buffer Access
 
 These methods return the core Win32 objects that `GraphicsRenderer::display()` passes directly to `WriteConsoleOutputW`.

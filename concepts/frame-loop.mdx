@@ -1,7 +1,7 @@
 ---
-title: "The Fazen2d Frame Loop: Clear, Draw, Display"
+title: "Fazen2d Frame Loop Explained: Clear, Draw, and Display"
 sidebarTitle: "Frame Loop"
-description: "Learn how Fazen2d's clear-draw-display cycle works, how the CHAR_INFO back-buffer is managed, and how to use delta time for frame-rate independent animation."
+description: "Learn how Fazen2d's three-step clear-draw-display cycle works and how to use delta time for smooth, frame-rate independent animation."
 ---
 
 Fazen2d renders via a double-buffered frame loop. Every frame follows three steps in strict order: clear the back-buffer to a uniform color, write shape data into it, then flush the completed buffer to the visible console in a single atomic call. This separation ensures the screen is never updated mid-draw, eliminating flicker even at high frame rates.
@@ -89,7 +89,7 @@ void GraphicsRenderer::display() {
 
 The back-buffer is a flat, one-dimensional `CHAR_INFO` array of size `console_width × console_height`. The cell at console coordinates `(x, y)` maps to:
 
-```
+```plaintext
 index = x + (ConsoleHandler::GetConsoleWidth() * y)
 ```
 
@@ -109,11 +109,9 @@ Shapes can be moved by a fixed pixel offset per frame, but the speed will then d
 ```cpp
 Fazen game(100, 100);
 Box   box(10, 10, 10, 5, redF);
-game.timer.Reset();
 
 while (!game.keyboardHandler.CheckForUserExit()) {
-    float dt = game.timer.GetElapsedTime();  // seconds since last call
-    game.timer.Reset();
+    float dt = game.timer.GetElapsedTime();  // seconds since last call; advances baseline internally
 
     game.graphics.background(whiteB);
     game.graphics.draw(box);
@@ -122,10 +120,10 @@ while (!game.keyboardHandler.CheckForUserExit()) {
 }
 ```
 
-`GetElapsedTime()` uses `std::chrono::system_clock` under the hood. It measures the duration between the previous call and now, then advances its internal baseline. Calling `Reset()` after reading the value keeps the clock fresh for the next frame.
+`GetElapsedTime()` uses `std::chrono::system_clock` under the hood. It captures the current time, computes the duration since `tp1`, advances `tp1` to the captured time, and returns the elapsed seconds — so the baseline is automatically updated on every call. No explicit `Reset()` is needed inside the loop.
 
 <Note>
-The `TimeManager` constructor calls `Reset()` automatically, so the timer is ready from the moment `Fazen` is constructed. You only need to call `Reset()` manually in the loop body when you want to restart the measurement each frame.
+The `TimeManager` constructor calls `Reset()` automatically, so the timer is primed from the moment `Fazen` is constructed. Call `Reset()` manually only if you want to discard elapsed time and start a fresh measurement — for example, after a pause or a scene transition.
 </Note>
 
 ## Complete Frame Loop Reference
@@ -135,6 +133,6 @@ The `TimeManager` constructor calls `Reset()` automatically, so the timer is rea
 | `game.graphics.background(short col)` | Fill every buffer cell with a space and the given color attribute |
 | `game.graphics.draw(Shape& s)` | Rasterize a shape into the back-buffer by calling its `draw()` |
 | `game.graphics.display()` | Flush the back-buffer to the console via `WriteConsoleOutputW` |
-| `game.timer.Reset()` | Restart the internal `std::chrono` clock |
-| `game.timer.GetElapsedTime()` | Return seconds elapsed since the last `Reset()` (or construction) |
+| `game.timer.Reset()` | Restart the internal `std::chrono` clock to the current time |
+| `game.timer.GetElapsedTime()` | Return seconds elapsed since the last call (or construction); advances the baseline automatically |
 | `game.keyboardHandler.CheckForUserExit()` | Return `true` when the Escape key is held, signalling loop exit |

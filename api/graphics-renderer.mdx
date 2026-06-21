@@ -36,11 +36,10 @@ void background(short col);
 **Implementation:**
 
 ```cpp
-void GraphicsRenderer::background(short col) {
-    int total = ConsoleHandler::GetConsoleHeight() * ConsoleHandler::GetConsoleWidth();
-    for (int i = 0; i < total; i++) {
+void GraphicsRenderer::background(short col = 0) {
+    for (int i = 0; i < ConsoleHandler::GetConsoleHeight() * ConsoleHandler::GetConsoleWidth(); i++) {
         ConsoleHandler::GetBuffScreen()[i].Char.UnicodeChar = ' ';
-        ConsoleHandler::GetBuffScreen()[i].Attributes       = col;
+        ConsoleHandler::GetBuffScreen()[i].Attributes = col;
     }
 }
 ```

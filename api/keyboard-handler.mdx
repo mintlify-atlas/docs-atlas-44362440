@@ -1,7 +1,7 @@
 ---
-title: "KeyboardHandler Class — Keyboard Input API"
+title: "KeyboardHandler Class — Keyboard Input API Reference"
 sidebarTitle: "KeyboardHandler"
-description: "KeyboardHandler wraps Windows GetAsyncKeyState to poll key press and release states. Use IsKeyPressed, IsKeyReleased, and CheckForUserExit in your loop."
+description: "KeyboardHandler wraps Windows GetAsyncKeyState to poll key press and release states. Use IsKeyPressed, IsKeyReleased, and CheckForUserExit in loops."
 ---
 
 `KeyboardHandler` wraps `GetAsyncKeyState` to let you poll keyboard state each frame without blocking. Rather than waiting on input events, it samples key state asynchronously on every call, making it well-suited for real-time game loops. Access it via `game.keyboardHandler`.

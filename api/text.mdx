@@ -1,5 +1,5 @@
 ---
-title: "Text Class — Unicode String Rendering API"
+title: "Text Class — Unicode Wide-String Console Rendering API"
 sidebarTitle: "Text"
 description: "Text renders a wide-character string at a given console position. Supports wstring and integer value overloads, color, and position setters."
 ---
@@ -65,7 +65,6 @@ Text(float x, float y, int b, short color);
 | Method | Returns | Description |
 |---|---|---|
 | `draw()` | `void` | Iterates over the internal `wstring`, writing each `wchar_t` and the color attribute into consecutive back-buffer cells at row `y` starting from column `x`. |
-| `translate(float dx, float dy)` | `void` | Adds `dx` to X and `dy` to Y. No bounds checking is performed — the caller must keep the string within console bounds. |
 | `setValue(wstring s)` | `void` | Replaces the displayed string with a new wide-string value. |
 | `setValue(int b)` | `void` | Converts `b` to a `wstring` via `std::wostringstream` and replaces the displayed string. Useful for live integer counters. |
 | `setPosX(float)` / `getPosX()` | `void` / `float` | Starting column of the text. |

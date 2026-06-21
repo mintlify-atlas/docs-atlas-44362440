@@ -1,5 +1,5 @@
 ---
-title: "System Requirements and Installation for Fazen2d"
+title: "Fazen2d System Requirements and Installation Guide"
 sidebarTitle: "Installation"
 description: "Install Fazen2d on Windows by cloning the repository. Covers required tools, compiler setup, and project structure before you build."
 ---
@@ -118,7 +118,7 @@ Copy the entire `include/` directory into your project tree, then point your com
 Compile all `include/*.cpp` files together with your own source files:
 
 ```bash
-g++ -std=c++11 include/*.cpp your_program.cpp -o your_program.exe
+g++ -std=c++11 include/*.cpp your_program.cpp -o your_program
 ```
 
 This lets you version your project independently and keep Fazen2d as a vendored dependency.

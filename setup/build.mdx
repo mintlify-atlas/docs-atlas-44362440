@@ -1,5 +1,5 @@
 ---
-title: "Building Fazen2d with Make or g++ on Windows"
+title: "Building Fazen2d with Make or g++ Compiler on Windows"
 sidebarTitle: "Build"
 description: "Compile Fazen2d using the provided Makefile or a manual g++ command. Includes build options, output artifacts, and common troubleshooting steps."
 ---
@@ -24,7 +24,7 @@ Fazen2d ships with a Makefile that compiles all `.cpp` files under `include/` pl
     make
     ```
 
-    Make discovers every `*.cpp` under `include/` (geometry primitives, renderer, input handlers, console management, and utilities) plus `main.cpp`, compiles each into a corresponding `.o` object file inside `include/`, and links everything into the executable `a` (or `a.exe` on Windows).
+    Make discovers every `*.cpp` under `include/` (geometry primitives, renderer, input handlers, console management, and utilities) plus `main.cpp`, compiles each into a corresponding `.o` object file inside `include/`, and links everything into the executable `a`.
   </Step>
 
   <Step title="Run the executable">
@@ -52,7 +52,7 @@ Fazen2d ships with a Makefile that compiles all `.cpp` files under `include/` pl
 
 Below is the complete Makefile as it exists in the repository:
 
-```make
+```makefile
 # Compiler and compiler flags
 CC = g++
 CFLAGS = -std=c++11
@@ -98,16 +98,16 @@ The pattern rule `$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp` compiles each source file in
 If GNU Make is not available in your environment, you can compile and link everything in a single `g++` invocation:
 
 ```bash
-g++ -std=c++11 include/*.cpp main.cpp -o Fazen2d.exe
+g++ -std=c++11 include/*.cpp main.cpp -o a
 ```
 
-This command is functionally equivalent to what the Makefile produces. The shell glob `include/*.cpp` expands to every implementation file, and `main.cpp` provides the `main()` entry point. There is no separate clean step — simply delete `Fazen2d.exe` when needed.
+This command is functionally equivalent to what the Makefile produces. The shell glob `include/*.cpp` expands to every implementation file, and `main.cpp` provides the `main()` entry point. There is no separate clean step — simply delete `a` when needed.
 
 ## Using run.bat
 
 The repository includes a convenience batch script, `run.bat`, that chains the build, optional cleanup, and run steps in sequence. Its full contents are:
 
-```bat
+```bash
 @echo off
 
 echo Compiling and building the project...

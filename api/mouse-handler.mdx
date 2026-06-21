@@ -12,9 +12,9 @@ description: "MouseHandler maps screen pixel coordinates to console cell positio
 #include "include/headers/MouseHandler.h"  // included automatically via Fazen.h
 ```
 
-<Important>
+<Warning>
   Call `UpdateMouseState()` once at the **start** of each frame — before querying any click or press state — so that all button checks within the same frame are consistent.
-</Important>
+</Warning>
 
 ## Methods
 
@@ -25,8 +25,8 @@ description: "MouseHandler maps screen pixel coordinates to console cell positio
 | `UpdateMouseState()` | `void` | Refreshes `leftButtonPressed` / `rightButtonPressed` internal state |
 | `IsLeftMousePressed()` | `bool` | `true` while the left button is held |
 | `IsRightMousePressed()` | `bool` | `true` while the right button is held |
-| `IsLeftMouseClicked()` | `bool` | `true` on the frame the left button transitions to pressed |
-| `IsRightMouseClicked()` | `bool` | `true` on the frame the right button transitions to pressed |
+| `IsLeftMouseClicked()` | `bool` | Always returns `false` due to a known implementation issue — see note below |
+| `IsRightMouseClicked()` | `bool` | Always returns `false` due to a known implementation issue — see note below |
 
 ### `float GetMouseX()`
 
@@ -50,11 +50,11 @@ Returns `true` while the right mouse button is held down, based on the state cap
 
 ### `bool IsLeftMouseClicked()`
 
-Returns `true` on the frame the left button transitions from unpressed to pressed. Useful for single-fire actions such as selecting a menu item or firing a projectile.
+Always returns `false` in the current implementation. The body evaluates `leftButtonPressed && !IsLeftMousePressed()`, and since `IsLeftMousePressed()` returns `leftButtonPressed`, the expression reduces to `leftButtonPressed && !leftButtonPressed`, which is always `false`. Use `IsLeftMousePressed()` to detect a held button instead.
 
 ### `bool IsRightMouseClicked()`
 
-Returns `true` on the frame the right button transitions from unpressed to pressed. Mirrors `IsLeftMouseClicked()` for the right button.
+Always returns `false` in the current implementation for the same reason as `IsLeftMouseClicked()` — it evaluates `rightButtonPressed && !IsRightMousePressed()`, which is always `false`. Use `IsRightMousePressed()` to detect a held button instead.
 
 ## Coordinate Mapping
 
@@ -82,8 +82,8 @@ while (!game.keyboardHandler.CheckForUserExit()) {
     cursor.setCenterY(my);
     game.graphics.draw(cursor);
 
-    if (game.mouseHandler.IsLeftMouseClicked()) {
-        // handle click at (mx, my)
+    if (game.mouseHandler.IsLeftMousePressed()) {
+        // handle left button held at (mx, my)
     }
 
     game.graphics.display();

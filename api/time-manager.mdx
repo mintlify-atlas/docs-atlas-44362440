@@ -55,5 +55,5 @@ while (!game.keyboardHandler.CheckForUserExit()) {
 In this pattern, `GetElapsedTime()` returns the wall-clock seconds that the previous iteration took (including rendering), and `Reset()` immediately starts measuring the next frame.
 
 <Tip>
-  Call `Reset()` at the very start of the loop — before drawing — not at the end. This way the measured delta includes rendering time as well as logic time, giving the most accurate per-frame interval for smooth, consistent motion.
+  Because `GetElapsedTime()` internally advances `tp1` after each measurement, calling `Reset()` immediately after `GetElapsedTime()` at the top of the loop (as shown above) provides an extra explicit reference point. If you rely solely on `GetElapsedTime()` without `Reset()`, successive calls will still produce accurate per-call intervals since `tp1` is updated each time.
 </Tip>

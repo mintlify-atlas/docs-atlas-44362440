@@ -1,7 +1,7 @@
 ---
 title: "StateManager Class — Global Coordinate Center API"
 sidebarTitle: "StateManager"
-description: "StateManager maintains a global center offset applied to all shape coordinates. Use setCenter, translateCoordinates, saveState, and restoreState for scene transforms."
+description: "StateManager maintains a global center offset for shape coordinates. Use setCenter, translateCoordinates, saveState, and restoreState for scene transforms."
 ---
 
 `StateManager` holds a global `(center_x, center_y)` offset that is applied to every shape coordinate at draw time. When shapes call `translateCoordinates(x, y)` internally before writing to the buffer, it shifts their positions by this center. This lets you move the viewport or reposition groups of objects without modifying each shape's stored coordinates individually.
